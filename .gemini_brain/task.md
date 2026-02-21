@@ -1,0 +1,27 @@
+# Tasks
+
+- [x] Inspect current git status and diff
+- [x] Review changes for commit message
+- [x] Stage and commit changes
+- [x] Verify commit
+- [x] Debug game crash (Round 2)
+    - [x] Search for unclosed Timers and Listeners
+    - [x] Inspect resource disposal in Screens
+    - [x] Check for memory leaks in state management
+    - [x] Implement robustness fixes (mounted checks, error boundaries)
+    - [x] Fix BreakingNewsTicker infinite loop
+    - [x] Remove audio engine to eliminate native crashes
+    - [x] Fix double-swipe/logic race condition
+    - [x] Stabilize main.dart navigation route
+    - [x] Verify stability
+- [x] Fix audio compatibility and ManagerMood positioning
+- [x] Implement safe bootstrap in main.dart
+- [x] GitHub Migration & IDX Preparation (Individual App)
+- [x] Refining Game Screen Layout Alignment
+- [/] Unified Workspace Migration (App + Brain)
+    - [ ] Create root-level `.gitignore`
+    - [ ] Initialize git at root-level
+    - [ ] Remove sub-repo `.git` folder
+    - [ ] Stage and commit entire workspace
+    - [ ] Push to new GitHub repository
+    - [ ] Provide IDX import guidance

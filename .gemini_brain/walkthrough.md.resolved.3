@@ -1,0 +1,26 @@
+# Walkthrough - Deep Stability & Audio Resilience
+
+I have implemented a second round of critical fixes to address the persistent crashes occurring during prolonged gameplay, particularly around match days.
+
+## Deep Stability Fixes
+
+### 1. Robust Match Simulation
+- **[game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)**:
+    - **Race Condition Guard**: Added a `_isProcessing` flag. This prevents "double-swiping" or rapid clicking from triggering multiple game logic updates or overlapping matches simultaneously.
+    - **Simulation Logic**: Refactored the match simulation to ensure all commentary phases (Pool 0, 1, and 2) are displayed correctly with consistent timing.
+- **[team.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/models/team.dart)**: Hardened the `Team.fromJson` parser to handle both [int](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/stat_rings.dart#38-56) and `double` for the `strength` field, preventing casting errors that frequently occur on Flutter Web.
+
+### 2. Audio "Fail-Silent" Engine
+- **[audio_manager.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart)**: 
+    - Implemented a "fail-silent" strategy for match sounds. Even if the expected MP3 files are missing from your assets, the game will now skip the sound and continue the simulation instead of crashing the browser's audio engine.
+
+### 3. Navigation & Launcher Stability
+- **[main.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/main.dart)**:
+    - **GameLauncher**: Extracted the game loading logic into a dedicated [GameLauncher](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/main.dart#57-106) widget. This ensures that `SharedPreferences` is loaded in a stable way that doesn't reset your session if the app's UI rebuilds for other reasons.
+    - **Safe Bootstrap**: Maintained the 3-second timeout guard to ensure the app always starts even if background services are slow.
+
+## Verification Results
+
+- **Stability**: Tested rapid-fire swiping and match simulations; no state corruption or crashes observed.
+- **Web Compatibility**: Verified type-parsing logic for `strength` values.
+- **Analysis**: `flutter analyze` passed (excluding minor deprecation notices).

@@ -1,0 +1,43 @@
+name: touchline_tantrum
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  csv: ^6.0.0
+  appinio_swiper: ^2.0.0
+  shared_preferences: ^2.2.2
+  # ADD THIS LINE FOR SOUND EFFECTS:
+  audioplayers: ^6.0.0
+  # Firebase & Authentication - COMMENTED OUT FOR TESTING
+  # firebase_core: ^2.24.2
+  # firebase_auth: ^4.16.0
+  # cloud_firestore: ^4.13.6
+  # google_sign_in: ^6.1.6
+  # sign_in_with_apple: ^5.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/cards.csv
+    - assets/images/manager/
+    - assets/images/backgrounds/press/
+    - assets/images/backgrounds/locker/
+    - assets/images/backgrounds/training/
+    - assets/images/backgrounds/stadium/
+    - assets/images/backgrounds/bg_sacked.png
+    - assets/images/backgrounds/bg_victory.png
+    # ADD THIS LINE TO REGISTER YOUR SOUNDS:
+    - assets/audio/

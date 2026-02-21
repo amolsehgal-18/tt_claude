@@ -1,0 +1,23 @@
+# Fix Game Progress & UI Alignment
+
+## Problem
+1. **Match Result Roadblock**: The user is unable to swipe or click on the match result card because the `_isProcessing` flag, set during the final scenario of the week, is never reset before the match result card is shown.
+2. **UI Overflow**: Elements like "Match Odds" and "Logos" require scrolling on most screens, leading to a fragmented experience.
+
+## Proposed Changes
+
+### [Fix] Game Logic
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- Reset `_isProcessing = false` in [_triggerReelResult](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#404-456) to ensure the match result card is interactive.
+
+### [UI] Layout Optimization
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- **Compact Table**: Reduce font sizes and padding in [_verticalTable](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#816-928).
+- **Merged Stats & Manager**: Tighten the [_statsRow](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#611-693) layout to use less vertical space.
+- **Dynamic Sizing**: Adjust card dimensions and spacing to ensure bottom elements (Odds, Ticker) are visible on standard mobile screens without excessive scrolling.
+- **Broadcast Hub**: Move match odds closer to the main layout to reduce the need for scrolling.
+
+## Verification Plan
+### Manual Verification
+- Play through a full week and verify that the match result card can be swiped.
+- Check the UI layout on different aspect ratios in the browser/emulator to ensure "Match Odds" are visible without scrolling.

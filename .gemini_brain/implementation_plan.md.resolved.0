@@ -1,0 +1,36 @@
+# Commit Changes in touchline_tantrum Repository
+
+The goal is to commit the existing staged changes in the `touchline_tantrum` submodule. These changes primarily focus on removing Firebase dependencies in favor of mock services and local storage, introducing a new "Manager Mood" widget, and general code quality improvements.
+
+## Proposed Changes
+
+### touchline_tantrum Submodule
+
+#### [MODIFY] [auth_service.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/services/auth_service.dart)
+- Removed Firebase Auth and Google/Apple sign-in dependencies.
+- Implemented a mock `AuthService` with a local `User` class for testing.
+
+#### [MODIFY] [save_service.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/services/save_service.dart)
+- Removed Firestore database integration.
+- Switched to using `SharedPreferences` for local career persistence.
+
+#### [NEW] [manager_mood.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/manager_mood.dart)
+- Added a new widget that displays the manager's mood (happy, neutral, stressed, angry) based on team stats.
+
+#### [MODIFY] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- Updated logic to update manager mood based on performance and season goals.
+- Added curly braces to control flow statements for code clarity.
+- Minor UI layout and `const` optimizations.
+
+#### [MODIFY] [breaking_news_ticker.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/breaking_news_ticker.dart), [settings_dialog.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/settings_dialog.dart), [stat_rings.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/stat_rings.dart), [trophy_cabinet.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/trophy_cabinet.dart), [career_select_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/career_select_screen.dart)
+- Applied general linting fixes (adding curly braces, `const` keywords, and property updates).
+
+## Verification Plan
+
+### Automated Tests
+- Run `flutter analyze` inside the `touchline_tantrum` directory to ensure no new linting errors or breaks were introduced.
+- Run existing unit tests if any (check for `test/` directory).
+
+### Manual Verification
+- Verify that the application builds correctly without Firebase dependencies.
+- Check if the "Manager Mood" widget appears and updates correctly during gameplay.

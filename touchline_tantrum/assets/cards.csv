@@ -1,0 +1,218 @@
+Scenario_Text,Left_Option,Right_Option,Board_Impact,Fan_Impact,Dressing_Room_Impact,Image_Category,Trigger_Condition,Game_Category,Is_Breaking
+Your star striker refuses to celebrate after scoring, hinting at unrest.,Drop him for the next match.,Praise him publicly in the post-match presser.,-8,2,5,player_ego,performance_high,locker
+The team's veteran leader criticizes your tactics to the media.,Strip him of the captaincy.,Call a team meeting to address concerns.,-5,-3,5,player_ego,performance_low,locker,0
+A young prospect arrives late to training for the third time this month.,Fine him two weeks' wages.,Make him run extra laps after training.,0,-2,5,training_ground,any_time,training,0
+The board demands you play their expensive new signing.,Start him despite poor form.,Stick with your in-form player.,10,-8,2,board_pressure,new_signing,press,0
+Two key players clash over a penalty decision during a match.,Let the captain decide who takes it.,Hold a team vote on penalty duties.,-3,0,-8,player_ego,match_day,stadium,0
+Your goalkeeper concedes a soft goal and blames the defenders.,Defend your defenders in the press.,Make the goalkeeper apologize privately.,-2,5,0,training_ground,performance_low,training,0
+The team's fitness coach recommends dropping an aging star.,Follow the medical advice.,Keep playing your experienced leader.,-5,8,2,training_ground,player_injury,training,0
+A player is caught partying two nights before a crucial derby.,Suspend him for three matches.,Give him a stern warning but start him.,-10,5,8,player_ego,match_important,locker,0
+The board sets unrealistic league position targets mid-season.,Publicly commit to the ambitious goal.,Push back citing squad limitations.,-15,10,2,board_pressure,performance_low,press,0
+Your assistant manager leaks team selection to the press.,Demand his resignation.,Handle it internally with a warning.,-8,0,-2,board_pressure,any_time,press,0
+Players complain the training schedule is too intense.,Reduce the intensity and focus on recovery.,Increase intensity to build resilience.,5,-5,5,training_ground,performance_low,training,0
+A player demands a new contract after six good games.,Open negotiations immediately.,Tell him to prove himself over a full season.,-5,0,10,player_ego,performance_high,locker,0
+The team hotel for an away game has poor facilities.,Demand an immediate upgrade.,Tell players to focus on football.,-5,-3,-2,training_ground,away_game,training,0
+Your set-piece coach wants to change the corner routine.,Implement the new routine immediately.,Stick with what's been working.,2,0,-2,training_ground,match_day,stadium,0
+A player refuses to be substituted despite being injured.,Force him off for his own safety.,Let him play through the pain.,-8,10,-5,player_ego,match_important,stadium,0
+The team's analytics department clashes with your scouts.,Side with the data analysts.,Trust your experienced scouts.,3,-2,0,board_pressure,transfer_window,press,0
+Players are using social media during team meetings.,Ban phones from all team areas.,Implement a fine system for violations.,2,0,2,training_ground,any_time,training,0
+A youth team player criticizes first-team training methods.,Bring him into first-team training.,Send him back to the youth setup.,-3,5,-5,training_ground,any_time,training,0
+The medical staff clears a player you think needs more time.,Accept their professional judgment.,Override them and extend recovery.,-5,0,-2,training_ground,player_injury,training,0
+Your captain organizes an unsanctioned team bonding trip.,Join them to supervise the evening.,Ban all unofficial team gatherings.,-10,5,-8,player_ego,any_time,locker,0
+A player's agent demands a starting guarantee.,Refuse to give any guarantees.,Promise rotation and fair chances.,-5,0,-5,player_ego,new_signing,locker,0
+The team's nutrition plan is being ignored by senior players.,Make meal attendance mandatory.,Appoint a player committee for nutrition.,3,-2,-2,training_ground,any_time,training,0
+A player is caught gambling on football (not his own games).,Suspend him and report to authorities.,Provide club counseling and support.,-10,0,-5,player_ego,any_time,locker,0
+The board wants to cash in on your academy star.,Sell to fund squad improvements.,Refuse and build the team around him.,15,-12,2,board_pressure,transfer_window,press,0
+Training ground facilities need urgent modernization.,Demand immediate investment from the board.,Make do with current facilities.,-10,5,5,board_pressure,any_time,press,0
+A player criticizes the club's transfer policy publicly.,Fine him for speaking out.,Acknowledge his concerns privately.,-8,3,8,player_ego,transfer_window,locker,0
+The team psychologist recommends dropping a key player.,Follow the specialist's advice.,Trust your own player management.,-5,0,0,training_ground,performance_low,training,0
+Players want to change the pre-match warm-up routine.,Implement their suggested changes.,Keep the established routine.,0,3,-2,training_ground,match_day,stadium,0
+A veteran player is mentoring younger players poorly.,Remove him from mentoring duties.,Provide training on effective mentoring.,-3,0,0,training_ground,any_time,training,0
+The team's travel secretary books budget flights.,Demand business class for all players.,Accept it as cost-saving for the club.,-8,2,2,board_pressure,away_game,press,0
+A player leaks tactics to a friend who's a journalist.,Sell him at the next opportunity.,Fine him heavily and keep him.,-15,0,5,player_ego,any_time,locker,0
+Your goalkeeping coach wants to change the #1's technique.,Implement the technical changes.,Stick with what made him successful.,-2,0,2,training_ground,performance_low,training,0
+Players complain about the quality of training equipment.,Order new equipment immediately.,Tell them to focus on their skills.,-5,2,5,training_ground,any_time,training,0
+A player misses a mandatory charity appearance.,Fine him and make him do double hours.,Accept a genuine apology.,-5,5,5,player_ego,any_time,locker,0
+The board intervenes in team selection for a cup match.,Accept their 'suggestions'.,Assert your managerial authority.,12,-8,0,board_pressure,cup_match,press,0
+Two players clash over who should take free kicks.,Hold a competition to decide.,Assign based on training performance.,0,0,2,training_ground,match_day,stadium,0
+The team's sports scientist recommends new recovery tech.,Invest in the new technology.,Stick with traditional methods.,-5,0,0,training_ground,any_time,training,0
+A player's family causes drama on social media.,Tell him to control his family.,Offer PR support to the family.,-3,0,-8,player_ego,any_time,locker,0
+The youth academy director wants more first-team integration.,Give youth players regular bench spots.,Keep experience in the squad.,-5,8,-2,board_pressure,performance_low,press,0
+Players want to change the post-match recovery protocol.,Implement their suggested changes.,Keep the medical team's protocol.,0,3,-2,training_ground,match_day,stadium,0
+A player celebrates excessively after a minor win.,Criticize his lack of professionalism.,Join in the celebration.,-5,8,-5,player_ego,performance_high,locker,0
+The team's kitman makes errors with matchday preparation.,Fire him immediately.,Provide additional training.,-3,0,0,training_ground,match_day,stadium,0
+A player refuses to play in a new position.,Drop him from the squad.,Work with him to adapt to the role.,-8,0,-5,player_ego,tactical_change,locker,0
+The board demands you speak at corporate events weekly.,Accept the additional duties.,Push back to focus on football.,5,-3,0,board_pressure,any_time,press,0
+Players are divided on political issues affecting football.,Ban all political discussion.,Facilitate respectful debate.,-5,-5,2,training_ground,any_time,training,0
+A player is performing poorly due to off-field issues.,Support him with club resources.,Drop him until he sorts it out.,-5,5,5,player_ego,performance_low,locker,0
+The team's data shows high injury rates in training.,Reduce training intensity.,Keep pushing for fitness gains.,3,-2,5,training_ground,player_injury,training,0
+A player wants to bring a personal coach to training.,Allow it if it improves him.,Ban outside coaches for unity.,-3,0,-5,training_ground,any_time,training,0
+The club's commercial director wants more player promotions.,Increase player commercial duties.,Protect training and recovery time.,5,-5,-2,board_pressure,any_time,press,0
+You're 1-0 down at half-time against a weaker team.,Make attacking substitutions immediately.,Stay patient with current system.,-5,5,-2,substitution,halftime,stadium,0
+Your star player picks up a yellow card early in the match.,Substitute him to avoid suspension risk.,"Keep him on, he's too important.",-3,8,0,substitution,early_yellow,stadium,0
+You're leading 2-0 but your team looks complacent.,Make defensive substitutions to secure win.,Push for a third goal to kill the game.,2,5,-2,formation,match_winning,stadium,0
+A key player is having a nightmare game.,Substitute him at halftime.,Give him until 60 minutes to improve.,-5,3,0,substitution,performance_low,stadium,0
+The opposition changes to a formation that's troubling you.,Match their formation change.,Stick with your original game plan.,-2,0,2,formation,opponent_change,stadium,0
+You're dominating possession but not creating chances.,Switch to more direct attacking play.,Keep patient with possession game.,0,5,-2,tactics,possession_high,stadium,0
+Your full-backs are being exploited defensively.,Switch to a back three for more cover.,Tell them to push higher and risk it.,-5,3,0,formation,defense_weak,stadium,0
+You need one goal to qualify in a cup competition.,Go all-out attack with 3 strikers.,Keep balanced and wait for chance.,-8,10,0,formation,cup_critical,stadium,0
+A player is clearly carrying an injury but wants to continue.,Substitute him immediately.,Let him play through it.,-10,8,-2,substitution,player_injury,stadium,0
+The weather turns terrible mid-match.,Switch to long-ball tactics.,Keep trying to play your passing game.,0,0,0,tactics,weather,stadium,0
+Your midfield is being overrun in central areas.,Bring on an extra defensive midfielder.,Push your wingers inside to help.,-2,0,2,formation,midfield_loss,stadium,0
+You're facing constant pressure from set pieces.,Bring on your tallest defenders.,Keep your best technical players on.,-3,0,-2,substitution,set_piece_weak,stadium,0
+The referee is giving soft fouls against your team.,Tell players to stop tackling completely.,Instruct them to play more physically.,-5,5,2,tactics,referee_bias,stadium,0
+Your opponent goes down to 10 men early.,Push for immediate goal with attacking changes.,Keep shape and wear them down.,0,8,2,formation,opponent_red,stadium,0
+You're playing against your former club who know your style.,Change your usual formation completely.,Stick with what got you here.,-3,0,2,formation,special_match,stadium,0
+A young substitute is warming up brilliantly.,Bring him on early for impact.,Wait for the right moment.,2,5,0,substitution,sub_warm,stadium,0
+Your captain is arguing with the referee constantly.,Substitute him to avoid red card.,Keep him on as he's fired up.,-8,5,0,substitution,captain_angry,stadium,0
+You need to protect a one-goal lead in added time.,Make time-wasting substitutions.,Keep playing normally.,0,5,-2,substitution,time_wasting,stadium,0
+Your star player is being man-marked out of the game.,Move him to a different position.,Keep him where he is to draw markers.,-2,3,2,tactics,star_marked,stadium,0
+The pitch is in terrible condition.,"Switch to simple, direct football.",Try to play your normal technical game.,0,0,-2,tactics,pitch_quality,stadium,0
+A viral TikTok shows your players mocking training drills.,Make the players apologize publicly.,Laugh it off as team bonding.,-5,8,-5,social_media,any_time,locker,0
+Your goalkeeper starts a fashion line that's ridiculed online.,Ban player businesses during season.,Model the clothing yourself.,-3,10,5,player_fashion,any_time,locker,0
+A player's terrible rap single goes viral.,Fine him for damaging club image.,Release a club-sponsored remix.,-8,15,-8,social_media,performance_high,locker,0
+Memes compare your bald head to a famous cartoon character.,Threaten legal action against creators.,Change your profile picture to the meme.,-10,20,-5,manager_appearance,any_time,locker,0
+Players are doing choreographed celebrations from video games.,Ban elaborate celebrations.,Join them with your own celebration.,-5,15,-8,player_fashion,match_winning,stadium,0
+A player gets a ridiculous haircut for social media clout.,Make him shave it off.,Get the same haircut as team unity.,-3,12,-5,player_fashion,any_time,locker,0
+Your post-match interview becomes a viral 'screaming' meme.,Avoid interviews for a week.,Lean into it with meme merchandise.,-8,18,-2,social_media,performance_low,press,0
+A player starts streaming on Twitch instead of resting.,Ban all gaming during season.,Join his stream as a guest.,-5,10,5,social_media,any_time,locker,0
+Fans create deepfake videos of you singing pop songs.,Issue takedown notices.,Release the 'song' as club anthem.,-12,20,-2,social_media,any_time,press,0
+A player's cryptocurrency investment advice goes viral.,Ban financial advice from players.,Start accepting crypto for tickets.,-15,5,5,social_media,any_time,locker,0
+Your team becomes a trending topic for boring football.,Double down on defensive approach.,Announce 'entertainment guarantee'.,-10,15,2,tactics,performance_low,stadium,0
+A player's dating app profile shows him in club kit.,Fine him for improper use of kit.,Create official club dating app.,-8,12,5,social_media,any_time,locker,0
+Fans use AI to put your face on famous movie scenes.,Send cease and desist letters.,Host a fan edit competition.,-10,18,-2,social_media,any_time,press,0
+A player starts a cooking show in the team kitchen.,Shut down the 'unauthorized' show.,Make it official club content.,-5,15,8,player_fashion,any_time,training,0
+Your pre-match team talk gets leaked as a podcast.,Investigate and punish the leaker.,Release weekly team talk podcasts.,-12,20,8,social_media,match_day,locker,0
+A VAR controversy from yesterday's Premier League match divides fans.,Publicly criticize VAR technology.,Defend the referees' difficult job.,-5,10,-2,var_controversy,real_event,stadium,0
+A top manager is surprisingly sacked by a rival club.,Criticize their impatience with managers.,Praise their ambition for success.,0,5,-2,manager_sack,real_event,press,0
+Major transfer rumors swirl about a superstar moving leagues.,Joke about signing him yourself.,Dismiss it as silly season talk.,-3,8,2,transfer_rumor,real_event,press,0
+A controversial political statement from a football figure sparks debate.,Take a strong stance on the issue.,Avoid political discussions entirely.,-10,5,-2,politics,real_event,press,0
+New financial fair play allegations surface against a big club.,Call for stricter enforcement.,Say every club manages finances differently.,-5,0,-2,finance,real_event,press,0
+A horrific injury in a live match shocks the football world.,Announce new safety protocols at your club.,Say it's an unfortunate part of the game.,-8,12,0,injury,real_event,stadium,0
+A club announces a controversial new sponsor (gambling/fast food).,Criticize irresponsible sponsorship.,Praise their commercial success.,-10,5,2,sponsorship,real_event,press,0
+Fans protest ticket price increases at a major stadium.,Support the protesting fans.,Defend clubs' right to set prices.,-15,15,-2,fan_protest,real_event,press,0
+A racism incident occurs during an international match.,Take strong anti-racism stance.,Handle it through official channels.,-5,10,-2,racism,real_event,stadium,0
+New research shows concerning head injury rates in football.,Implement immediate heading restrictions.,Wait for more evidence before acting.,-12,8,-2,health,real_event,training,0
+A financial audit reveals the club has been hiding massive debts.,Demand board resignations.,Support the board's difficult decisions.,-20,5,-2,finance,financial_crisis,press,0
+Stadium safety inspectors find critical structural issues.,Close the stadium for immediate repairs.,Keep it open with temporary fixes.,-25,15,2,stadium_safety,any_time,stadium,0
+Fans organize a full boycott over ownership issues.,Meet with protest leaders immediately.,Ignore them and focus on football.,-30,20,0,fan_protest,performance_low,press,0
+A key player is arrested in a serious criminal investigation.,Suspend him indefinitely.,Support him as innocent until proven.,-35,10,8,legal,any_time,locker,0
+The club faces expulsion from the league for rule violations.,Appeal and fight the decision.,Accept responsibility and rebuild.,-40,5,2,legal,any_time,press,0
+A doping scandal implicates multiple first-team players.,Suspend all involved immediately.,Defend players until investigation complete.,-30,15,-2,doping,any_time,training,0
+Natural disaster damages training facilities beyond repair.,Demand immediate board investment.,Use local facilities temporarily.,-20,10,-5,stadium_safety,any_time,training,0
+Match-fixing allegations surface from years ago.,Cooperate fully with investigation.,Deny everything and protect club legacy.,-25,5,2,legal,any_time,press,0
+Tax authorities launch a major investigation into club finances.,Make full transparency immediately.,Hire expensive lawyers to fight.,-35,0,2,finance,any_time,press,0
+A terrorist threat forces cancellation of a home match.,Increase security spending dramatically.,Return to normal as soon as possible.,-15,20,-2,stadium_safety,any_time,stadium,0
+Your star player demands a contract renegotiation mid-season.,Open talks to keep him happy.,Refuse and risk losing him.,-12,8,-10,player_ego,performance_high,locker,0
+The board wants to sign a marketing-friendly 'influencer' player.,Prioritize football ability over followers.,Sign him for commercial benefits.,8,-5,0,board_pressure,transfer_window,press,0
+Training sessions are being filmed by drones overhead.,Hire security to shoot drones down.,Ignore it as modern football.,-5,0,-5,training_ground,any_time,training,0
+A player brings a 'mental coach' who clashes with your staff.,Ban all outside consultants.,Incorporate him into staff meetings.,-3,0,2,training_ground,any_time,training,0
+The team's pre-match meal is changed without consultation.,Revert to the previous menu.,Give the new menu a chance.,-2,0,2,training_ground,match_day,training,0
+Players want to use alternative medicine practitioners.,Allow it under club supervision.,Ban all non-club medical staff.,-5,0,2,training_ground,player_injury,training,0
+A youth coach is poached by a rival academy.,Demand compensation and restrict moves.,Wish him well in his career.,-8,2,0,board_pressure,any_time,press,0
+The team's travel schedule has too many commercial stops.,Cut commercial duties for players.,Accept it as necessary income.,5,-3,2,board_pressure,away_game,press,0
+A player's personal trainer conflicts with club methods.,Make him choose club or personal trainer.,Integrate the trainer into club system.,-5,0,-2,training_ground,any_time,training,0
+The pitch is being used for concerts affecting quality.,Ban all non-football events.,Accept the revenue from events.,10,-8,2,board_pressure,any_time,stadium,0
+Players are using unapproved recovery supplements.,Test and ban all outside supplements.,Educate rather than punish.,-3,0,-2,training_ground,any_time,training,0
+A veteran player is slowing down training intensity.,Challenge him to keep up with youngsters.,Adjust training for different ages.,-5,3,-5,training_ground,any_time,training,0
+The club's social media mocks a struggling opponent.,Apologize and discipline social team.,Defend it as 'banter'.,-10,8,-8,social_media,performance_high,locker,0
+A player's autobiography reveals dressing room secrets.,Fine him for breach of contract.,Use it for promotional opportunities.,-8,5,-8,player_ego,any_time,locker,0
+The medical team recommends retirement for an injured star.,Support the medical decision.,Give him one more season to recover.,-12,10,-2,training_ground,player_injury,training,0
+Players complain about the weight of new kit material.,Revert to previous kit design.,Tell them to adapt to improvements.,-5,3,-2,training_ground,any_time,training,0
+A player's charity work causes scheduling conflicts.,Limit charity activities during season.,Support his philanthropic efforts.,-3,8,5,player_ego,any_time,locker,0
+The board wants to expand stadium during season.,Delay until offseason.,Push forward despite disruption.,15,-10,2,board_pressure,any_time,stadium,0
+Training ground neighbors complain about noise levels.,Limit training hours to appease them.,Fight for your right to train.,-8,0,-5,training_ground,any_time,training,0
+A player develops unusual pre-match rituals.,Allow it if it helps performance.,Standardize pre-match routines.,0,0,-2,training_ground,match_day,stadium,0
+The team's analytics show you should bench your captain.,Follow the data and drop him.,Trust your instinct and keep playing him.,-10,5,-8,board_pressure,performance_low,locker,0
+Players want to change the post-match interview protocol.,Implement their suggestions.,Keep the established media rules.,0,2,0,training_ground,match_day,press,0
+A player is photographed with a rival club's executive.,Fine him for inappropriate conduct.,Dismiss it as innocent meeting.,-8,0,-8,player_ego,any_time,locker,0
+The club historian wants more input on traditions.,Incorporate historical elements.,Focus on creating new traditions.,0,5,2,board_pressure,any_time,press,0
+Training equipment is outdated compared to rivals.,Demand immediate upgrades.,Focus on coaching over equipment.,-10,0,5,training_ground,any_time,training,0
+A player's family member criticizes team selection on TV.,Ban families from media comments.,Invite them to discuss concerns.,-5,0,8,player_ego,any_time,press,0
+The team's sleep coach recommends individual schedules.,Implement personalized sleep plans.,Keep unified team schedule.,-3,0,2,training_ground,any_time,training,0
+A player wants to represent country in minor tournament.,Release him for national duty.,Keep him for club commitments.,-5,8,5,player_ego,international_break,locker,0
+The board wants to sign players based on shirt sales.,Refuse and focus on football quality.,Accept commercial considerations.,12,-8,0,board_pressure,transfer_window,press,0
+Training is disrupted by constant media presence.,Ban media from training entirely.,Allow limited supervised access.,-3,0,-5,training_ground,any_time,training,0
+A player's business venture fails, affecting his focus.,Offer club financial advice.,Tell him to separate business and football.,-5,0,0,player_ego,performance_low,locker
+The team's hydration strategy is questioned by experts.,Bring in new hydration specialists.,Stick with current proven methods.,-5,0,-2,training_ground,any_time,training,0
+Players want to use new GPS tracking technology.,Invest in the latest tech.,Focus on coach's eye over data.,-8,0,0,training_ground,any_time,training,0
+A player's social media following demands tactical changes.,Ignore social media pressure.,Engage with fans online.,-5,10,-5,social_media,performance_low,locker,0
+The club's catering staff go on strike mid-season.,Support the striking workers.,Bring in temporary replacements.,-15,5,0,board_pressure,any_time,press,0
+A player develops a yoga routine that helps performance.,Make it mandatory for all players.,Keep it as personal choice.,0,3,2,training_ground,any_time,training,0
+The board intervenes in youth development philosophy.,Assert control over youth system.,Compromise on development approach.,-8,0,-2,board_pressure,any_time,press,0
+Training pitches are below Premier League standard.,Demand immediate resurfacing.,Make do with current facilities.,-12,5,5,training_ground,any_time,training,0
+A player's podcast discusses internal team matters.,Shut down the podcast.,Make it an official club podcast.,-8,10,8,social_media,any_time,locker,0
+The team's travel arrangements cause jet lag issues.,Invest in private jet travel.,Optimize current travel schedules.,-20,0,0,board_pressure,away_game,press,0
+A player wants to study for degree during season.,Support his education goals.,Ask him to focus solely on football.,-3,5,-8,player_ego,any_time,locker,0
+The club's security head wants stricter player protocols.,Implement stricter security.,Maintain current reasonable measures.,-2,0,0,training_ground,any_time,training,0
+Players develop their own warm-up routine ignoring coaches.,Enforce coaching staff routines.,Incorporate their ideas officially.,-5,2,0,training_ground,match_day,stadium,0
+A player's transfer request leaks before you're informed.,Sell him immediately for any price.,Keep him and repair relationship.,-15,0,5,player_ego,transfer_window,locker,0
+The team's performance analyst clashes with your view.,Side with your own judgment.,Consider their data-driven perspective.,-3,0,2,training_ground,performance_low,training,0
+Players want to visit sick children before matches.,Make it regular pre-match ritual.,Keep it as occasional activity.,0,10,-8,player_ego,match_day,stadium,0
+The board wants to sign a player you previously coached poorly.,Refuse to work with him again.,Give him a second chance.,-10,0,0,board_pressure,transfer_window,press,0
+Training is constantly interrupted by player interviews.,Limit media access to one day weekly.,Embrace the media attention.,0,5,-5,training_ground,any_time,training,0
+A player's dietary restrictions complicate team meals.,Accommodate all special diets.,Implement standardized team diet.,-3,0,2,training_ground,any_time,training,0
+The team's kit design is criticized as unlucky.,Change kit design mid-season.,Keep current design and prove superstition wrong.,-10,8,-2,board_pressure,performance_low,stadium,0
+A player wants to use cryotherapy chamber excessively.,Limit use to medical recommendation.,"Allow free access to recovery tools.""",-2,0,-2,training_ground,any_time,training,0
+The club's former legend criticizes modern training methods.,Defend your modern approach.,Incorporate some traditional elements.,-5,5,5,training_ground,any_time,training,0
+Players are using mental visualization techniques.,Make it part of official training.,Keep it as individual preference.,0,0,0,training_ground,match_day,training,0
+A player's wedding conflicts with pre-season training.,Allow him to miss part of pre-season.,Ask him to reschedule wedding.,-8,3,-5,player_ego,preseason,locker,0
+The board wants weekly detailed performance reports.,Provide comprehensive reports.,Push back on administrative burden.,5,-2,0,board_pressure,any_time,press,0
+Training facilities are shared with women's team causing conflict.,Schedule separate training times.,Fight for exclusive access.,-10,5,-5,training_ground,any_time,training,0
+A player develops a superstition about left boot first.,Allow harmless superstitions.,"Standardize dressing room routines.""",0,0,5,training_ground,match_day,locker,0
+The team's bus driver takes unsafe routes.,Fire him immediately.,Provide additional driver training.,-5,0,2,training_ground,away_game,stadium,0
+Players want to use floating rest chambers for recovery.,Invest in the expensive technology.,"Stick with proven recovery methods.""",-15,0,2,training_ground,any_time,training,0
+A player's personal life is distracting the whole squad.,Offer club counseling support.,Tell him to sort it out privately.,-5,0,5,player_ego,performance_low,locker,0
+The board wants you to mentor their son who wants to coach.,Accept the extra responsibility.,Politely decline citing time constraints.,8,0,-2,board_pressure,any_time,press,0
+Training sessions are too predictable according to players.,Introduce more varied sessions.,Keep proven training structure.,0,2,5,training_ground,performance_low,training,0
+A player wants to bring spiritual healer to matches.,Ban all non-medical personnel.,Allow it in dressing room.,-5,0,-2,training_ground,match_day,stadium,0
+The team's pre-match walkout music is unpopular.,Let players vote on new music.,Keep traditional club anthem.,0,3,0,training_ground,match_day,stadium,0
+A player's car collection causes parking lot issues.,Assign parking by seniority only.,Build additional parking spaces.,-5,0,2,training_ground,any_time,training,0
+The club's sponsorship deal includes player appearances.,Maximize player commercial duties.,Limit to minimum required.,10,-5,0,board_pressure,any_time,press,0
+Training matches against local teams become too physical.,Stop arranging these matches.,Continue for realistic preparation.,-3,0,-5,training_ground,any_time,training,0
+A player wants to use hyperbaric oxygen chamber at home.,Ban unapproved recovery methods.,Incorporate into club facilities.,-5,0,2,training_ground,any_time,training,0
+The team's matchday routine is disrupted by TV demands.,Fight for traditional timings.,"Adapt to broadcast requirements.""",-8,0,0,board_pressure,match_day,press,0
+Players are using VR headsets for tactical training.,Invest in VR technology.,Focus on real-world training.,-10,0,-5,training_ground,any_time,training,0
+A player's social media shows him using competitor products.,Fine him for breach of sponsorship.,Use it to renegotiate deals.,-8,0,8,player_ego,any_time,locker,0
+The board wants to install cameras in dressing room.,Refuse completely for privacy.,Allow with strict controls.,-12,0,5,board_pressure,any_time,locker,0
+Training in extreme weather causes health concerns.,Move training indoors.,Toughen players with conditions.,-3,0,-5,training_ground,weather,training,0
+A player wants to use acupuncture for recovery.,Allow under medical supervision.,Ban alternative treatments.,-2,0,2,training_ground,player_injury,training,0
+The team's post-match analysis sessions run too long.,Shorten to key points only.,Keep comprehensive analysis.,0,0,0,training_ground,match_day,stadium,0
+A player's family runs a business using club connections.,Ban family business activities.,Support legitimate family enterprise.,-8,0,-5,player_ego,any_time,locker,0
+The board wants to sign players from specific countries for marketing.,Prioritize footballing reasons only.,Consider commercial potential.,15,-5,-2,board_pressure,transfer_window,press,0
+Training ground wildlife (birds/foxes) disrupts sessions.,Remove wildlife humanely.,Incorporate into training challenges.,-3,0,-5,training_ground,any_time,training,0
+A player wants to use floatation tank therapy.,Invest in club floatation tank.,Send him to external facility.,-8,0,-2,training_ground,any_time,training,0
+The team's matchday suits are uncomfortable.,Change to comfortable attire.,Keep traditional formal suits.,-5,3,2,training_ground,match_day,stadium,0
+A player's nutritionist conflicts with club dietitian.,Make him choose one provider.,Integrate both into plan.,-3,0,-2,training_ground,any_time,training,0
+The board wants daily press conferences.,"Refuse, protect preparation time.",Accept increased media duties.,10,-8,0,board_pressure,any_time,press,0
+Training matches lack competitive intensity.,Bring in tougher opposition.,Focus on tactical execution.,-2,0,5,training_ground,any_time,training,0
+A player wants to use cold plunge at unusual times.,Set strict schedule for all players.,Allow personalized timing.,0,0,-2,training_ground,any_time,training,0
+The team's travel includes unnecessary luxury stops.,Cut luxury for efficiency.,Keep luxury for player morale.,-5,2,0,board_pressure,away_game,press,0
+Players are using smart rings to monitor sleep/data.,Make it mandatory for all players.,Keep as personal choice.,-3,0,2,training_ground,any_time,training,0
+A player's celebrity friendships distract from football.,Advise reducing public appearances.,Embrace celebrity connections.,-5,8,5,player_ego,any_time,locker,0
+The board wants you to attend all youth team matches.,Delegate to assistants.,Make time for youth development.,5,-2,-2,board_pressure,any_time,stadium,0
+Training lacks specific set-piece focus.,Increase set-piece training time.,Keep balanced training approach.,0,0,-5,training_ground,set_piece_weak,training,0
+A player wants to use advanced biometric monitoring.,Invest in monitoring technology.,Trust traditional coaching methods.,-12,0,-2,training_ground,any_time,training,0
+The team's hotel choices are consistently poor.,Take personal control of bookings.,Delegate to travel team.,-5,0,2,training_ground,away_game,training,0
+Players want more input on opposition analysis.,Involve them in analysis sessions.,Keep analysis as coaching staff duty.,0,3,0,training_ground,match_day,stadium,0
+A player's sponsorship requires specific boot color.,Allow exception to kit rules.,Enforce standard boot policy.,-5,0,5,player_ego,any_time,locker,0
+The board wants to stream training live online.,Refuse for tactical security.,Allow with delay and editing.,-8,5,5,board_pressure,any_time,training,0
+Training recovery methods vary too much between players.,Standardize recovery protocols.,Allow personalized recovery.,-2,0,-5,training_ground,any_time,training,0
+A player wants to use red light therapy at home.,Incorporate into club facilities.,Keep as personal responsibility.,-5,0,-2,training_ground,any_time,training,0
+The team's pre-match hotel has poor sleep quality.,Change hotel immediately.,Work with hotel to improve.,-8,0,-2,training_ground,match_day,stadium,0
+Players develop their own halftime talk rituals.,Standardize halftime procedures.,Allow captain-led discussions.,-5,2,0,training_ground,halftime,stadium,0
+A player's social media shows training drills publicly.,Fine for revealing tactics.,Use it for fan engagement.,-10,8,5,social_media,any_time,locker,0
+The board wants to sign aging stars for experience.,Focus on younger players.,Value veteran leadership.,5,5,0,board_pressure,transfer_window,press,0
+Training lacks game-realistic pressure situations.,Introduce competitive scenarios.,Focus on technical development.,0,0,5,training_ground,performance_low,training,0
+A player wants to use inversion table for back issues.,Allow under medical supervision.,Ban unproven methods.,-2,0,0,training_ground,player_injury,training,0
+The team's travel includes sponsor events affecting rest.,Limit sponsor events around matches.,Embrace commercial requirements.,8,-5,2,board_pressure,away_game,press,0
+Players are using too many different supplement brands.,Standardize club-approved supplements.,Allow personal preference.,-3,0,0,training_ground,any_time,training,0
+A player's charity marathon affects preseason fitness.,Support his charity efforts.,Ask him to postpone for football.,-5,10,-5,player_ego,preseason,locker,0
+The board wants to implement AI for team selection.,Use as advisory tool only.,Reject and trust human judgment.,-10,0,-2,board_pressure,any_time,press,0
+Training lacks specific position-specific drills.,Increase specialized position training.,Keep unified team training.,0,0,-5,training_ground,any_time,training,0
+A player wants to use cupping therapy marks visible during matches.,Ban visible alternative therapy marks.,Allow if medically approved.,-5,0,-2,training_ground,match_day,stadium,0
+The team's matchday routine is too rigid according to players.,Introduce more flexibility.,Maintain disciplined routine.,0,2,-2,training_ground,match_day,stadium,0
+Players want to analyze their own performance data.,Provide full data access.,Filter data through coaching staff.,-2,0,-2,training_ground,any_time,training,0
+A player's business sells products conflicting with sponsors.,Force him to choose business or sponsors.,Negotiate compromise between parties.,-10,0,-8,player_ego,any_time,locker,0
+Breaking: A top club has just made a record-breaking bid for your star striker!,Accept the record fee.,Reject and keep the player.,20,-15,2,transfer_rumor,any_time,press,1
+Injury Crisis: Multiple first-team players are down with a viral flu before the derby!,Play the youth team.,Risk the half-fit seniors.,0,-5,-2,injury,match_important,training,1

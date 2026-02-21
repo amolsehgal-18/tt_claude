@@ -1,0 +1,28 @@
+# Fix Persistent Game Crashes
+
+## Objective
+The game is still crashing for the user. We will completely remove the audio engine and add further stability guards to eliminate potential causes of native browser/engine failures.
+
+## Proposed Changes
+
+### [Critical] Audio Removal
+#### [MODIFIED] [audio_manager.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart)
+- Completely strip out all `audioplayers` code.
+- Convert [AudioManager](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#4-83) into a dummy singleton where all methods ([initialize](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#14-22), [playBackgroundMusic](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#23-32), [playMatchSound](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#48-67), etc.) are empty `Future.value()`.
+- Remove the `AudioPlayer` instances.
+
+### [Fix] Stability Hardening
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- **Timer Safety**: Ensure `_gameTimer` and `_pressureTimer` are ALWAYS cancelled in [dispose()](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#78-82).
+- **Null Guards**: Add null-aware operators and default values for all UI elements that depend on `nextOpponent` or `activeScenario`.
+- **Mounted Checks**: Perform a final audit of all `setState` calls to ensure they are preceded by `if (mounted)`.
+
+#### [MODIFIED] [breaking_news_ticker.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/breaking_news_ticker.dart)
+- Ensure the `ScrollController` is properly disposed of.
+- Add additional check for `_scrollController.hasClients` before every animation or jump call.
+
+## Verification Plan
+### Automated Tests
+- Run `flutter analyze` to ensure no errors after removing the audio package dependency from the code.
+### Manual Verification
+- Play through multiple game weeks to ensure no crashes occur during match simulations (where audio was previously triggered).

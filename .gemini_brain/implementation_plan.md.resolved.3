@@ -1,0 +1,54 @@
+# Fix Game Crash & Stability Issues
+
+### [Critical Stability & Audio Fixes]
+
+- **Audio Resilience**: [AudioManager](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#5-82) will now use a global try-catch that silently ignores *any* sound errors. This prevents missing asset files from crashing the match-day simulation sequence.
+- **Navigation Safety**: Refactoring the `/game` route in [main.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/main.dart) to use a more stable state management approach, preventing the `FutureBuilder` from accidentally resetting the game when `SharedPreferences` updates.
+- **Type Safety (Web)**: Fixing `Team.fromJson` to use [(json['strength'] as num).toDouble()](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/settings_manager.dart#12-18) to avoid potential `double` vs [int](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/stat_rings.dart#38-56) cast errors on Flutter Web.
+- **Swipe Guard**: Adding a `_isProcessing` flag to [GameScreen](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#22-28) to prevent double-clicks/swipes from triggering multiple matches or logic loops simultaneously.
+- **Ticker Logic**: Correcting the Phase 0 message bug in [_runRemainingSegments](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#298-317).
+
+The goal is to resolve the game crashes reported by the user, specifically focusing on improper resource management, missing routes, and inefficient UI updates.
+
+## Proposed Changes
+
+### [Component] Navigation & Routing
+
+#### [MODIFY] [main.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/main.dart)
+- Add named routes for `/game` to prevent crashes when using `Navigator.pushReplacementNamed`.
+- Ensure all required parameters are passed correctly.
+
+### [Component] Game Logic & Safety
+
+#### [MODIFY] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- Add `if (!mounted) return;` checks to all [Timer](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#209-221) and `Future` callbacks that call `setState`.
+- Remove the unused `_audioPlayer` instance.
+- Cache the `SharedPreferences` instance during initialization to reduce overhead.
+- Ensure the `_gameTimer` is consistently cancelled in all exit paths.
+
+#### [MODIFY] [manager_mood.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/manager_mood.dart)
+- Fix threshold bug: update 70/50/30 to 0.7/0.5/0.3 to match the normalized double values.
+
+### [Component] UI Optimization
+
+#### [MODIFY] [breaking_news_ticker.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/breaking_news_ticker.dart)
+- Reduce the frequency of `Timer.periodic` and `animateTo` duration to improve performance (e.g., from 50ms to 100ms or more).
+- Cache the joined message string instead of re-joining it in every build/item builder call.
+
+### [Component] Audio Management
+
+#### [MODIFY] [audio_manager.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart)
+- Improve error handling for `UrlSource` to prevent potential hangs.
+- (Optional but recommended) Suggest moving match sounds to local assets for offline stability.
+
+## Verification Plan
+
+### Automated Tests
+- Run `flutter analyze` to ensure no linting regressions.
+- Verify that `Navigator.pushReplacementNamed(context, '/game')` no longer crashes in a mock environment (if possible).
+
+### Manual Verification
+- Start a new career and play several games to ensure stability.
+- Use the "RESUME CAREER" button to verify the new named route works correctly.
+- Observe the "Manager Mood" widget to ensure it updates images correctly based on performance.
+- Check the [BreakingNewsTicker](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/breaking_news_ticker.dart#5-11) for smooth scrolling without UI lag.

@@ -1,0 +1,36 @@
+# Fix End-of-Season Crash & Session Hardening
+
+## Problem
+The user reports a crash at GW 34. While the exact cause is elusive, there are several "soft" points in the code that could trigger an unhandled exception as the season progresses or when sessions change:
+1. **Index Out of Bounds**: [_getSlice](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#531-538) and [_updateMood](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#325-345) use `indexWhere` without guarding against a `-1` result.
+2. **Empty Deck**: [_nextCard](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#237-261) assumes `_masterDeck` is never empty.
+3. **Session Conflict**: [GameScreen](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#22-28) loads saved data even if the new `widget.session` doesn't match the old one (e.g., different name or mode), leading to "User not found" errors in the league table.
+
+## Proposed Changes
+
+### [Guard] Game Logic Hardening
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- **Safe Indexing**: Add checks in [_getSlice](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#531-538), [_updateMood](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#325-345), and [_checkWinCondition](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#592-607) to handle cases where the user team is not found in the league table.
+- **Deck Protection**: Add a fallback in [_nextCard](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#237-261) if the deck is empty.
+- **Session Sync**: Update [_initializeGame](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#57-81) to check if the `saved_session` matches the current `widget.session`. If not, start a fresh game to avoid data corruption.
+- **Match Limit Guard**: Add an explicit check in [_nextCard](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#237-261) to ensure we don't proceed if the match limit has already been reached.
+
+### [UI] Layout Safety
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- **Null Guards**: Ensure all UI elements using `nextOpponent` or `activeScenario` have robust null fallbacks (already partially implemented, but will perform a final audit).
+
+### [UI] Even Spacing & Scroll Prevention
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- **Remove Scroll**: Remove `SingleChildScrollView` to ensure the game remains on a single screen.
+- **Space Evenly**: Use `MainAxisAlignment.spaceEvenly` in the main `Column` to distribute elements across the available vertical space.
+- **Flatten Broadcast Hub**: Move items from [_broadcastHub](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#746-775) (Days to Kickoff, Logos, Team Names, Match Odds) directly into the main `Column` for uniform spacing.
+- **Scenario Width**: Maintain the current `0.82` width for the [_mainActionCard](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#680-714).
+- **Top Header**: Keep [_verticalTable](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#789-901) at the top as a focused header.
+
+## Verification Plan
+### Automated Tests
+- Run `flutter analyze` to ensure no regression and type safety.
+### Manual Verification
+- Start a "Don't Bottle It" (8 GM) saga.
+- Play until GW 38 and verify the end overlay appears without crashing.
+- Quit to main menu, change name, and start a new saga to verify the session reset logic.

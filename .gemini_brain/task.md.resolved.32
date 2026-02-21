@@ -1,0 +1,25 @@
+# Tasks
+
+- [x] Inspect current git status and diff
+- [x] Review changes for commit message
+- [x] Stage and commit changes
+- [x] Verify commit
+- [x] Debug game crash (Round 2)
+    - [x] Search for unclosed Timers and Listeners
+    - [x] Inspect resource disposal in Screens
+    - [x] Check for memory leaks in state management
+    - [x] Implement robustness fixes (mounted checks, error boundaries)
+    - [x] Fix BreakingNewsTicker infinite loop
+    - [x] Remove audio engine to eliminate native crashes
+    - [x] Fix double-swipe/logic race condition
+    - [x] Stabilize main.dart navigation route
+    - [x] Verify stability
+- [x] Fix audio compatibility and ManagerMood positioning
+- [x] Implement safe bootstrap in main.dart
+- [x] Refining Game Screen Layout Alignment
+    - [x] Remove `SingleChildScrollView` to prevent scrolling
+    - [x] Use `MainAxisAlignment.spaceEvenly` for even distribution
+    - [x] Flatten [_broadcastHub](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#746-775) and reorder components as requested
+    - [x] Maintain scenario card width at `0.82` (User approved)
+    - [x] Remove unused [_broadcastHub](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#746-775) declaration
+    - [x] Verify fix with `flutter analyze`

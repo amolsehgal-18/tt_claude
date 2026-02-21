@@ -1,0 +1,26 @@
+# Fix Game Progress & UI Alignment
+
+## Problem
+1. **Match Result Roadblock**: The user is unable to swipe or click on the match result card because the `_isProcessing` flag, set during the final scenario of the week, is never reset before the match result card is shown.
+2. **UI Overflow**: Elements like "Match Odds" and "Logos" require scrolling on most screens, leading to a fragmented experience.
+
+## Proposed Changes
+
+### [Fix] Game Logic
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- Reset `_isProcessing = false` in [_triggerReelResult](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#419-472) to ensure the match result card is interactive.
+
+### [UI] Layout Optimization
+#### [MODIFIED] [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart)
+- **Audio Removal**: Completely disable the [AudioManager](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/utils/audio_manager.dart#4-83) implementation. It will now be a dummy class that returns immediately from all calls. This eliminates `audioplayers` as a potential source of native browser crashes.
+- **Resource Hardening**: Double-check all [Timer](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#217-233) and `AnimationController` usage in [GameScreen](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#22-28) and [BreakingNewsTicker](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/breaking_news_ticker.dart#5-11) to ensure they are strictly tied to the widget lifecycle.
+- **Null Safety**: Add extra null checks in the UI for `nextOpponent` and `activeScenario` values.
+- **Compact Table**: Reduce font sizes and padding in [_verticalTable](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#812-924).
+- **Merged Stats & Manager**: Tighten the [_statsRow](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart#596-666) layout to use less vertical space.
+- **Dynamic Sizing**: Adjust card dimensions and spacing to ensure bottom elements (Odds, Ticker) are visible on standard mobile screens without excessive scrolling.
+- **Broadcast Hub**: Move match odds closer to the main layout to reduce the need for scrolling.
+
+## Verification Plan
+### Manual Verification
+- Play through a full week and verify that the match result card can be swiped.
+- Check the UI layout on different aspect ratios in the browser/emulator to ensure "Match Odds" are visible without scrolling.

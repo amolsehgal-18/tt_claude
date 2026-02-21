@@ -1,0 +1,25 @@
+# Tasks
+
+- [x] Inspect current git status and diff
+- [x] Review changes for commit message
+- [x] Stage and commit changes
+- [x] Verify commit
+- [x] Debug game crash (Round 2)
+    - [x] Search for unclosed Timers and Listeners
+    - [x] Inspect resource disposal in Screens
+    - [x] Check for memory leaks in state management
+    - [x] Implement robustness fixes (mounted checks, error boundaries)
+    - [x] Fix BreakingNewsTicker infinite loop
+    - [x] Remove audio engine to eliminate native crashes
+    - [x] Fix double-swipe/logic race condition
+    - [x] Stabilize main.dart navigation route
+    - [x] Verify stability
+- [x] Fix audio compatibility and ManagerMood positioning
+- [x] Implement safe bootstrap in main.dart
+- [x] Fix Game Progress & UI Alignment
+    - [x] Reset `_isProcessing` in match results to allow proceeding
+    - [x] Optimize GameScreen layout to fit all elements without scrolling
+    - [x] Verify fix- [/] Fix VAR Logic Lockup
+    - [ ] Reset `_isProcessing` in VAR appeal paths
+    - [ ] Fix double-VAR trigger on "REJECTED" screens
+    - [ ] Verify fix with `flutter analyze`

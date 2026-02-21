@@ -1,0 +1,15 @@
+# Tasks
+
+- [x] Inspect current git status and diff
+- [x] Review changes for commit message
+- [x] Stage and commit changes
+- [x] Verify commit
+- [/] Debug game crash
+    - [x] Search for unclosed Timers and Listeners
+    - [x] Inspect resource disposal in Screens
+    - [x] Check for memory leaks in state management
+    - [/] Implement robustness fixes (mounted checks, error boundaries)
+    - [ ] Fix BreakingNewsTicker infinite loop
+    - [ ] Fix AudioManager dead URLs
+    - [ ] Verify stability
+- [x] Fix audio compatibility and ManagerMood positioning

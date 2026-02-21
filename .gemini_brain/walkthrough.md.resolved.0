@@ -1,0 +1,36 @@
+# Walkthrough - Code Commit
+
+I have successfully committed the changes in the `touchline_tantrum` submodule and updated the parent repository reference.
+
+## Changes Made
+
+### touchline_tantrum Submodule
+The following files were committed with the message: `"Refactor: Remove Firebase dependencies, introduce ManagerMood widget, and apply linting fixes"`
+
+#### Firebase Removal & Mock Services
+- [auth_service.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/services/auth_service.dart): Replaced Firebase Auth with a mock `AuthService` and local `User` class.
+- [save_service.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/services/save_service.dart): Replaced Firestore with `SharedPreferences` for local career saving.
+
+#### New UI Features
+- [manager_mood.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/manager_mood.dart): **[NEW]** Added a widget that dynamically shifts manager mood images based on performance stats.
+- [game_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/game_screen.dart): Integrated `ManagerMood` logic and updated performance-based state handling.
+
+#### Code Quality & Linting
+- Applied `const` optimizations and added missing curly braces for control structures across:
+    - [breaking_news_ticker.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/breaking_news_ticker.dart)
+    - [settings_dialog.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/settings_dialog.dart)
+    - [stat_rings.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/stat_rings.dart)
+    - [trophy_cabinet.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/widgets/trophy_cabinet.dart)
+    - [career_select_screen.dart](file:///Users/amolsehgal/antigravity%20-%20touchline%20tantrum/touchline_tantrum/lib/screens/career_select_screen.dart)
+
+### Parent Repository
+- Updated the `touchline_tantrum` submodule reference to point to the new commit.
+
+## Verification Results
+
+### Git Status
+- Parent repository: `nothing to commit, working tree clean`
+- Submodule: `nothing to commit, working tree clean`
+
+### Code Analysis
+- Verified that all previously staged changes are now part of the commit history.
