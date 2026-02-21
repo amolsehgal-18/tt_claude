@@ -1,0 +1,24 @@
+# Flutter
+touchline_tantrum/build/
+touchline_tantrum/.dart_tool/
+touchline_tantrum/.flutter-plugins
+touchline_tantrum/.flutter-plugins-dependencies
+touchline_tantrum/.packages
+touchline_tantrum/pubspec.lock
+touchline_tantrum/ios/Flutter/Generated.xcconfig
+touchline_tantrum/ios/Flutter/flutter_export_environment.sh
+touchline_tantrum/android/local.properties
+touchline_tantrum/macos/Flutter/ephemeral/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Agent Data
+# We want to migrate .gemini/ so the brain is preserved, 
+# so we do NOT ignore it here.
