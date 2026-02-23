@@ -15,6 +15,8 @@ dependencies:
   shared_preferences: ^2.2.2
   # ADD THIS LINE FOR SOUND EFFECTS:
   audioplayers: ^6.0.0
+  provider: ^6.1.5+1
+  firebase_auth: ^6.1.4
   # Firebase & Authentication - COMMENTED OUT FOR TESTING
   # firebase_core: ^2.24.2
   # firebase_auth: ^4.16.0

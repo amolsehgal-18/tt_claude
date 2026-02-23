@@ -100,7 +100,7 @@ class _SetupScreenState extends State<SetupScreen> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (c) => MainMenuScreen(
+                        builder: (c) => MainMenu(
                               userName: _nameController.text,
                               userLogo: 0,
                             )));
