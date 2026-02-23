@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "364508519543",
+    "project_id": "studio-3702759365-fe51c",
+    "storage_bucket": "studio-3702759365-fe51c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:364508519543:android:e79a03a19cb0a8e94b7a72",
+        "android_client_info": {
+          "package_name": "com.example.touchline_tantrum"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCiXs4LLAkfJE-TaJvDSGE9RwjCuFpH-ns"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
