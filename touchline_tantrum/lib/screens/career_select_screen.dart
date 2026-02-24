@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:touchline_tantrum/utils/trophy_manager.dart';
 import '../utils/constants.dart';
 import '../widgets/settings_dialog.dart';
 import '../widgets/tutorial_overlay.dart';
@@ -14,6 +15,33 @@ class CareerSelectScreen extends StatefulWidget {
 
 class _CareerSelectScreenState extends State<CareerSelectScreen> {
   bool _showTutorial = false;
+  final TrophyManager _trophyManager = TrophyManager();
+  Map<String, int> _winsBySaga = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWins();
+  }
+
+  Future<void> _loadWins() async {
+    final wins = await _trophyManager.getWins();
+    final Map<String, int> winsBySaga = {
+      'bottle': 0,
+      'top4': 0,
+      'escape': 0,
+    };
+
+    for (String win in wins) {
+      if (winsBySaga.containsKey(win)) {
+        winsBySaga[win] = winsBySaga[win]! + 1;
+      }
+    }
+
+    setState(() {
+      _winsBySaga = winsBySaga;
+    });
+  }
 
   // Mock user data for testing (no Firebase)
   String get _mockUserName => "Test Manager";
@@ -153,7 +181,7 @@ class _CareerSelectScreenState extends State<CareerSelectScreen> {
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => const TrophyCabinet(),
+                      builder: (context) => TrophyCabinet(winsBySaga: _winsBySaga),
                     );
                   },
                 ),
