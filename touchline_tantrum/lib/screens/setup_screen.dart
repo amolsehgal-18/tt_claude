@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/constants.dart';
-import '../widgets/team_logo.dart';
-import 'main_menu.dart';
+import 'package:touchline_tantrum/utils/constants.dart';
+import 'package:touchline_tantrum/widgets/team_logo.dart';
+import 'package:touchline_tantrum/screens/main_menu.dart';
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
@@ -15,13 +13,22 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   final TextEditingController _nameController =
       TextEditingController(text: "SAME SHIZZ FC");
-  int _logoSeed = Random().nextInt(1000);
+  int _logoSeed = 0;
   bool _hasSavedGame = false;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _checkForSavedGame();
+    _pageController = PageController(viewportFraction: 0.4, initialPage: _logoSeed);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _checkForSavedGame() async {
@@ -42,25 +49,37 @@ class _SetupScreenState extends State<SetupScreen> {
                   fontWeight: FontWeight.w900,
                   color: kNeonYellow)),
           const SizedBox(height: 40),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              setState(() => _logoSeed = Random().nextInt(1000));
-              HapticFeedback.selectionClick();
-            },
-            child: Column(children: [
-              Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: const BoxDecoration(
-                      shape: BoxShape.circle, color: Colors.white10),
-                  child: TeamLogo(seed: _logoSeed, size: 80, isLight: true)),
-              const SizedBox(height: 10),
-              const Text("TAP TO CHANGE LOGO",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold))
-            ]),
+          SizedBox(
+            height: 120,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: 20, // There are 20 logos
+              onPageChanged: (index) {
+                setState(() {
+                  _logoSeed = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return AnimatedBuilder(
+                  animation: _pageController,
+                  builder: (context, child) {
+                    double value = 1.0;
+                    if (_pageController.position.haveDimensions) {
+                      value = (_pageController.page! - index).abs();
+                      value = (1 - value * 0.4).clamp(0.0, 1.0);
+                    }
+                    return Center(
+                      child: SizedBox(
+                        height: Curves.easeOut.transform(value) * 100,
+                        width: Curves.easeOut.transform(value) * 100,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: TeamLogo(seed: index, size: 100, isLight: true),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 30),
           SizedBox(

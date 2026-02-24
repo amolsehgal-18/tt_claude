@@ -4,6 +4,7 @@ import '../models/active_game_session.dart';
 import '../widgets/settings_dialog.dart';
 import '../widgets/tutorial_overlay.dart';
 import 'game_screen.dart';
+import 'trophy_cabinet_screen.dart';
 
 class MainMenu extends StatefulWidget {
   final String userName;
@@ -42,16 +43,35 @@ class _MainMenuState extends State<MainMenu> {
                   [19, 38]),
             ]),
           ),
-          // Buttons in top-right corner (vertically stacked)
+          Positioned(
+            top: 50,
+            left: 20,
+            child: IconButton(
+              icon: const Icon(Icons.help_outline,
+                  color: Colors.white, size: 30),
+              onPressed: () {
+                setState(() => _showTutorial = true);
+              },
+            ),
+          ),
           Positioned(
             top: 50,
             right: 20,
             child: Column(
               children: [
-                // Settings button
+                IconButton(
+                  icon: const Icon(Icons.emoji_events, color: Colors.white, size: 30),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const TrophyCabinetScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
                 IconButton(
                   icon:
-                      const Icon(Icons.settings, color: kNeonYellow, size: 30),
+                      const Icon(Icons.settings, color: Colors.white, size: 30),
                   onPressed: () {
                     showDialog(
                       context: context,
@@ -59,19 +79,9 @@ class _MainMenuState extends State<MainMenu> {
                     );
                   },
                 ),
-                const SizedBox(height: 10),
-                // Tutorial button
-                IconButton(
-                  icon: const Icon(Icons.help_outline,
-                      color: kNeonYellow, size: 30),
-                  onPressed: () {
-                    setState(() => _showTutorial = true);
-                  },
-                ),
               ],
             ),
           ),
-          // Tutorial overlay
           if (_showTutorial)
             TutorialOverlay(onComplete: () {
               setState(() => _showTutorial = false);
@@ -92,7 +102,7 @@ class _MainMenuState extends State<MainMenu> {
         margin: const EdgeInsets.symmetric(vertical: 10),
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
-            color: exp ? Colors.black : Colors.white.withValues(alpha: 0.05),
+            color: exp ? Colors.black : Colors.white.withAlpha(12),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: exp ? theme : Colors.white10)),
         child: Column(children: [

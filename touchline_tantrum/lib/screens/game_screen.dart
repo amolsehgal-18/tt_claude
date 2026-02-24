@@ -9,6 +9,7 @@ import 'dart:convert';
 import '../utils/constants.dart';
 import '../utils/settings_manager.dart';
 import '../utils/audio_manager.dart';
+import '../utils/trophy_manager.dart';
 import '../models/active_game_session.dart';
 import '../models/team.dart';
 import '../models/game_card_data.dart';
@@ -589,7 +590,7 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  void _checkWinCondition() {
+  void _checkWinCondition() async {
     int userIdx = leagueTable
         .indexWhere((t) => t.name == widget.session.userName.toUpperCase());
     int rank = userIdx == -1 ? 20 : userIdx + 1;
@@ -598,6 +599,10 @@ class _GameScreenState extends State<GameScreen> {
         (widget.session.id == "top4" && rank <= 4) ||
         (widget.session.id == "escape" && rank <= 17);
     if (success) {
+      final trophyManager = TrophyManager();
+      if (widget.session.id != 'career') {
+        await trophyManager.addWin(widget.session.id);
+      }
       setState(() => isWon = true);
     } else {
       setState(() => isSacked = true);
@@ -1011,27 +1016,58 @@ class _GameScreenState extends State<GameScreen> {
     ]);
   }
 
-  Widget _endOverlay() => Scaffold(
-          body: Center(
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-            Text(isWon ? "SAGA COMPLETE" : "CONTRACT TERMINATED",
-                textAlign: TextAlign.center,
-                style: const TextStyle(
+  Widget _endOverlay() {
+    final String bgImage = isWon
+        ? 'assets/images/backgrounds/bg_victory.png'
+        : 'assets/images/backgrounds/bg_sacked.png';
+
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            bgImage,
+            fit: BoxFit.cover,
+          ),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  isWon ? "SAGA COMPLETE" : "CONTRACT TERMINATED",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: Colors.white)),
-            const SizedBox(height: 40),
-            ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: kBlack,
-                    side: const BorderSide(color: Colors.white, width: 2)),
-                onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
-                child: const Text("MAIN MENU",
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18))),
-          ])));
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        blurRadius: 10.0,
+                        color: Colors.black,
+                        offset: Offset(5.0, 5.0),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kBlack.withAlpha((255 * 0.5).round()),
+                    side: const BorderSide(color: Colors.white, width: 2),
+                  ),
+                  onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
+                  child: const Text(
+                    "MAIN MENU",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 enum ManagerState { neutral, happy, stressed, angry, sacked }

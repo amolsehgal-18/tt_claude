@@ -7,8 +7,12 @@ const Color kDeepRed = Color(0xFFFF4466);
 const Color kSlateBlue = Color(0xFF3A4750);
 const Color kSteelGray = Color(0xFF212121);
 const Color kBlack = Color(0xFF0A0A0A);
-const Color kGold = Color(0xFFFFD700);
 const Color kPitchDark = Color(0xFF0F1A10);
+
+// TROPHY COLORS
+const Color kGold = Color(0xFFFFD700);
+const Color kSilver = Color(0xFFC0C0C0);
+const Color kBronze = Color(0xFFCD7F32);
 
 const String kWinSound =
     "https://actions.google.com/sounds/v1/crowds/stadium_cheer.ogg";
