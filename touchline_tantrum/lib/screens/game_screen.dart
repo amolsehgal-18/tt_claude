@@ -967,7 +967,7 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Image.asset(
             bgImage,
-            fit: BoxFit.cover,
+            fit: BoxFit.fill,
           ),
           Container(
             color: Colors.black.withAlpha(128),
@@ -1038,7 +1038,7 @@ class _GameScreenState extends State<GameScreen> {
         border: Border.all(color: Colors.white24, width: 1),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
            const Center(
             child: Text(
@@ -1051,11 +1051,11 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-          const Divider(color: Colors.white24, height: 25),
+          const Divider(color: Colors.white24, height: 25, indent: 30, endIndent: 30),
 
-          _statRow("Final League Position", "$finalRank"),
+          _statRow("Final League Position:", "$finalRank"),
           const SizedBox(height: 12),
-          _statRow("Final Objective", objectiveMet ? "Achieved" : "Failed"),
+          _statRow("Final Objective:", objectiveMet ? "Achieved" : "Failed"),
           const SizedBox(height: 20),
 
           _statHeader("Final Approval Ratings"),
@@ -1099,9 +1099,10 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _statRow(String title, String value) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(title, style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 16),
         Text(value, style: const TextStyle(color: kNeonYellow, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
