@@ -21,4 +21,9 @@ class TrophyManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_winsKey);
   }
+
+  // New method to specifically add a win for a full career season
+  Future<void> addFullSeasonWin() async {
+    await addWin('career_win');
+  }
 }

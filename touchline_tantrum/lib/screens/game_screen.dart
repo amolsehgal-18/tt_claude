@@ -10,6 +10,7 @@ import '../utils/constants.dart';
 import '../utils/settings_manager.dart';
 import '../utils/audio_manager.dart';
 import '../utils/trophy_manager.dart';
+import '../utils/feedback_messages.dart';
 import '../models/active_game_session.dart';
 import '../models/team.dart';
 import '../models/game_card_data.dart';
@@ -308,10 +309,7 @@ class _GameScreenState extends State<GameScreen> {
 
     // Check if objective is currently being met
     int rank = _getUserRank();
-    bool isObjectiveMet = (widget.session.id == "career") ||
-        (widget.session.id == "bottle" && rank == 1) ||
-        (widget.session.id == "top4" && rank <= 4) ||
-        (widget.session.id == "escape" && rank <= 17);
+    bool isObjectiveMet = _isObjectiveMet(rank);
 
     // Initial mood for first game week in certain modes
     if (matchesPlayed == 0 && (widget.session.id == "bottle" || widget.session.id == "top4")) {
@@ -359,6 +357,13 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       currentMood = mood;
     });
+  }
+
+  bool _isObjectiveMet(int rank) {
+      return (widget.session.id == "career" && rank == 1) ||
+        (widget.session.id == "bottle" && rank == 1) ||
+        (widget.session.id == "top4" && rank <= 4) ||
+        (widget.session.id == "escape" && rank <= 17);
   }
 
   int _getUserRank() {
@@ -440,19 +445,23 @@ class _GameScreenState extends State<GameScreen> {
         widget.session.userName.toUpperCase(), 0, widget.session.userLogo,
         strength: 0.6);
     if (gamesAlreadyPlayed > 0) {
-      if (widget.session.id == "bottle") {
+        if (widget.session.id == "career") {
         if (rivals.isNotEmpty) {
-          userTeam.points = rivals[0].points + 2;
+          userTeam.points = rivals[0].points + 3; // Start in 1st
+        }
+      } else if (widget.session.id == "bottle") {
+        if (rivals.isNotEmpty) {
+          userTeam.points = rivals[0].points + 3; // Start in 1st
         }
       } else if (widget.session.id == "top4") {
         if (rivals.length >= 4) {
-          userTeam.points = rivals[3].points;
+          userTeam.points = rivals[3].points; // Start in 4th
         } else if (rivals.isNotEmpty) {
           userTeam.points = rivals.last.points;
         }
       } else if (widget.session.id == "escape") {
         if (rivals.length >= 17) {
-          userTeam.points = rivals[16].points;
+          userTeam.points = rivals[16].points; // Start in 17th
         } else if (rivals.isNotEmpty) {
           userTeam.points = 0;
         }
@@ -570,22 +579,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _checkWinCondition() async {
-    int userIdx =
-        leagueTable.indexWhere((t) => t.name == widget.session.userName.toUpperCase());
-    int rank = userIdx == -1 ? 20 : userIdx + 1;
-    bool objectiveMet = (widget.session.id == "career") ||
-        (widget.session.id == "bottle" && rank == 1) ||
-        (widget.session.id == "top4" && rank <= 4) ||
-        (widget.session.id == "escape" && rank <= 17);
-
+    int rank = _getUserRank();
+    bool objectiveMet = _isObjectiveMet(rank);
     bool supportLow =
         boardTrust <= 0.05 || fanSupport <= 0.05 || dressingRoom <= 0.05;
 
     if (objectiveMet && !supportLow) {
       final trophyManager = TrophyManager();
-      if (widget.session.id != 'career') {
-        await trophyManager.addWin(widget.session.id);
-      }
+      await trophyManager.addWin(widget.session.id);
       setState(() => isWon = true);
     } else {
       setState(() => isSacked = true);
@@ -630,7 +631,7 @@ class _GameScreenState extends State<GameScreen> {
                 children: [
                   _verticalTable(),
                   _statsRow(),
-                  _mainActionCard(),
+                  _mainActioncard(),
                   if (!isSimulating &&
                       activeScenario != null &&
                       !(activeScenario?.isMatchResult ?? false)) ...[
@@ -688,31 +689,39 @@ class _GameScreenState extends State<GameScreen> {
       );
     }
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
           Expanded(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-            StatRings(
-              board: boardTrust,
-              dressingRoom: dressingRoom,
-              fans: fanSupport,
-              size: 115,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                StatRings(
+                  board: boardTrust,
+                  dressingRoom: dressingRoom,
+                  fans: fanSupport,
+                  size: 130,
+                ),
+                const SizedBox(height: 15),
+                _fullLegendItem("BOARD", boardTrust, kElectricBlue),
+                const SizedBox(height: 5),
+                _fullLegendItem("SQUAD", dressingRoom, kGold),
+                const SizedBox(height: 5),
+                _fullLegendItem("FANS", fanSupport, kDeepRed),
+              ],
             ),
-            const SizedBox(height: 10),
-            _fullLegendItem("BOARD", boardTrust, kElectricBlue),
-            const SizedBox(height: 5),
-            _fullLegendItem("SQUAD", dressingRoom, kGold),
-            const SizedBox(height: 5),
-            _fullLegendItem("FANS", fanSupport, kDeepRed),
-          ])),
-          const SizedBox(width: 20),
+          ),
           Expanded(
             child: ManagerMood(
-              size: 100,
+              size: 120,
               mood: currentMood,
             ),
           ),
-        ]));
+        ],
+      ),
+    );
   }
 
   Widget _fullLegendItem(String label, double value, Color color) =>
@@ -721,17 +730,17 @@ class _GameScreenState extends State<GameScreen> {
             width: 8,
             height: 8,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
+        const SizedBox(width: 8),
         Text("$label - ${(value * 100).toInt()}%",
             style: const TextStyle(
               color: Colors.white70,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
               fontFamily: 'sans-serif',
             ))
       ]);
 
-  Widget _mainActionCard() => Column(children: [
+  Widget _mainActioncard() => Column(children: [
         Container(
           width: MediaQuery.of(context).size.width * 0.82,
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -949,6 +958,9 @@ class _GameScreenState extends State<GameScreen> {
         ? 'assets/images/backgrounds/bg_victory.png'
         : 'assets/images/backgrounds/bg_sacked.png';
 
+    int finalRank = _getUserRank();
+    bool objectiveMet = _isObjectiveMet(finalRank);
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -957,20 +969,23 @@ class _GameScreenState extends State<GameScreen> {
             bgImage,
             fit: BoxFit.cover,
           ),
-          Center(
+          Container(
+            color: Colors.black.withAlpha(128),
+          ),
+          SafeArea(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (isSacked)
                   Image.asset(
                     'assets/images/manager/man_sacked.png',
-                    height: 150,
+                    height: 120,
                   ),
                 Text(
-                  isWon ? "SAGA COMPLETE" : "CONTRACT TERMINATED",
+                  isWon ? "OBJECTIVE COMPLETE" : "CONTRACT TERMINATED",
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 32,
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     shadows: [
@@ -984,7 +999,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 const SizedBox(height: 20),
                 // Season stats display
-                _seasonStats(),
+                _seasonStats(objectiveMet: objectiveMet),
               ],
             ),
           ),
@@ -993,13 +1008,16 @@ class _GameScreenState extends State<GameScreen> {
             right: 20,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: kBlack.withAlpha((255 * 0.5).round()),
+                backgroundColor: kBlack.withAlpha(128),
                 side: const BorderSide(color: Colors.white, width: 2),
               ),
               onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
-              child: const Text(
-                "MAIN MENU",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Text(
+                  "MAIN MENU",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ),
@@ -1008,61 +1026,71 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  Widget _seasonStats() {
+  Widget _seasonStats({required bool objectiveMet}) {
     int finalRank = _getUserRank();
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.black.withAlpha(192),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white24, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-           Center(
+           const Center(
             child: Text(
               "SEASON REVIEW",
               style: TextStyle(
                 color: kNeonYellow, 
-                fontSize: 18, 
-                fontWeight: FontWeight.bold
+                fontSize: 20, 
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5
               ),
             ),
           ),
-          const Divider(color: Colors.white24, height: 20),
+          const Divider(color: Colors.white24, height: 25),
 
           _statRow("Final League Position", "$finalRank"),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          _statRow("Final Objective", objectiveMet ? "Achieved" : "Failed"),
+          const SizedBox(height: 20),
 
           _statHeader("Final Approval Ratings"),
+          const SizedBox(height: 8),
           _fullLegendItem("BOARD", boardTrust, kElectricBlue),
+          const SizedBox(height: 5),
           _fullLegendItem("SQUAD", dressingRoom, kGold),
+          const SizedBox(height: 5),
           _fullLegendItem("FANS", fanSupport, kDeepRed),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
 
           _statHeader("Board Verdict"),
+          const SizedBox(height: 5),
           Text(
-            _getVerdict(boardTrust),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
+            '"${FeedbackProvider.getFeedback("board", isWon, boardTrust, objectiveMet)}"'
+            ,textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic, fontSize: 13),
           ),
-           const SizedBox(height: 15),
+           const SizedBox(height: 20),
 
            _statHeader("Dressing Room Atmosphere"),
+           const SizedBox(height: 5),
           Text(
-            _getVerdict(dressingRoom),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
+            '"${FeedbackProvider.getFeedback("squad", isWon, dressingRoom, objectiveMet)}"'
+            ,textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic, fontSize: 13),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
 
           _statHeader("Fan Reaction"),
+          const SizedBox(height: 5),
           Text(
-            _getVerdict(fanSupport),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic),
+            '"${FeedbackProvider.getFeedback("fans", isWon, fanSupport, objectiveMet)}"'
+            ,textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontStyle: FontStyle.italic, fontSize: 13),
           ),
         ],
       ),
@@ -1073,8 +1101,8 @@ class _GameScreenState extends State<GameScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 14)),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.bold)),
+        Text(value, style: const TextStyle(color: kNeonYellow, fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -1084,19 +1112,11 @@ class _GameScreenState extends State<GameScreen> {
       title.toUpperCase(),
       textAlign: TextAlign.center,
       style: const TextStyle(
-        color: kNeonYellow,
-        fontSize: 12,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 1.5,
+        color: Colors.white, 
+        fontSize: 14, 
+        fontWeight: FontWeight.w900, 
+        letterSpacing: 1.5
       ),
     );
-  }
-
-  String _getVerdict(double rating) {
-    if (rating >= 0.8) return "Delighted with your performance. You're a club legend!";
-    if (rating >= 0.6) return "Pleased with the progress. A solid season all around.";
-    if (rating >= 0.4) return "An acceptable, if uninspiring, season. We expect more next time.";
-    if (rating >= 0.2) return "Serious concerns are being raised about your management.";
-    return "A disastrous season. The board is questioning your position.";
   }
 }
