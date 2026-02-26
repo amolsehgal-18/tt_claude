@@ -55,6 +55,7 @@ class _GameScreenState extends State<GameScreen> {
   int _matchPhase = 0;
   Timer? _gameTimer;
   bool _lastMatchWon = false;
+  String? _endGameImage;
 
   @override
   void initState() {
@@ -499,8 +500,15 @@ class _GameScreenState extends State<GameScreen> {
         .where((t) => t.name != widget.session.userName.toUpperCase())
         .toList();
     if (ops.isEmpty) return;
-    nextOpponent = ops[Random().nextInt(ops.length)];
-  }
+
+    // Ensure opponent logo is different from user's
+    Team potentialOpponent = ops[Random().nextInt(ops.length)];
+    while (potentialOpponent.iconSeed == widget.session.userLogo) {
+        potentialOpponent = ops[Random().nextInt(ops.length)];
+    }
+    nextOpponent = potentialOpponent;
+}
+
 
   void _triggerReelResult() {
     setState(() {
@@ -560,23 +568,16 @@ class _GameScreenState extends State<GameScreen> {
         (activeScenario?.leftOption.contains("VAR APPEAL") ?? false)) {
       setState(() {
         wildcards--;
-        bool overturned = Random().nextBool();
-        if (overturned) {
-          _lastMatchWon = true;
-          wins++;
-          losses--;
-          activeScenario = GameCardData(
-              "WIN! (VAR OVERTURN)", "STAY HUMBLE", "CELEBRATE", 0, 0, 0, 0,
-              isMatchResult: true);
-          leagueTable
-              .where((t) => t.name == widget.session.userName.toUpperCase())
-              .forEach((t) => t.points += 3);
-          _sortLeague();
-        } else {
-          activeScenario = GameCardData("LOSS! (VAR REJECTED)", "ACCEPT FATE",
-              "SACK BOARD", 0, -10, -10, 0,
-              isMatchResult: true);
-        }
+        _lastMatchWon = true;
+        wins++;
+        losses--;
+        activeScenario = GameCardData(
+            "WIN! (VAR OVERTURN)", "STAY HUMBLE", "CELEBRATE", 0, 0, 0, 0,
+            isMatchResult: true);
+        leagueTable
+            .where((t) => t.name == widget.session.userName.toUpperCase())
+            .forEach((t) => t.points += 3);
+        _sortLeague();
         _isProcessing = false;
         _updateMood();
       });
@@ -605,6 +606,18 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _checkWinCondition() async {
+    final assetManifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final pressImagePaths = assetManifest
+        .listAssets()
+        .where((string) => string.startsWith("assets/images/backgrounds/press/"))
+        .toList();
+    if (pressImagePaths.isNotEmpty) {
+      final randomImage = pressImagePaths[Random().nextInt(pressImagePaths.length)];
+      setState(() {
+        _endGameImage = randomImage;
+      });
+    }
+
     int rank = _getUserRank();
     bool objectiveMet = _isObjectiveMet(rank);
     bool supportLow =
@@ -976,8 +989,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _endOverlay() {
-    final String bgImage = 'assets/images/backgrounds/stadium/Gemini_Generated_Image_kdgkt7kdgkt7kdgk.png';
-
     int finalRank = _getUserRank();
     bool objectiveMet = _isObjectiveMet(finalRank);
 
@@ -987,10 +998,11 @@ class _GameScreenState extends State<GameScreen> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              bgImage,
-              fit: BoxFit.cover,
-            ),
+            if (_endGameImage != null)
+              Image.asset(
+                _endGameImage!,
+                fit: BoxFit.cover,
+              ),
             Container(
               color: Colors.black.withAlpha(128),
             ),
@@ -998,11 +1010,6 @@ class _GameScreenState extends State<GameScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (isSacked)
-                    Image.asset(
-                      'assets/images/manager/man_sacked.png',
-                      height: 120,
-                    ),
                   Text(
                     isWon ? "OBJECTIVE COMPLETE" : "CONTRACT TERMINATED",
                     textAlign: TextAlign.center,
