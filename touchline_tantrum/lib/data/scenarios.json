@@ -1,0 +1,94 @@
+
+[
+  {
+    "scenario": "Your star striker has been offered a massive contract by a rival club. He says he wants to stay, but the money is life-changing.",
+    "optionA": "Sell him for a huge transfer fee.",
+    "optionB": "Break the wage structure to keep him.",
+    "effectsA": [-10, -20, 15, -0.05],
+    "effectsB": [15, 10, -15, 0.05]
+  },
+  {
+    "scenario": "The board has arranged a lucrative, but exhausting, mid-season friendly in another continent.",
+    "optionA": "Publicly question the wisdom of the trip.",
+    "optionB": "Rest your key players and focus on youth.",
+    "effectsA": [10, 5, -10, 0.05],
+    "effectsB": [-10, 0, 10, -0.05]
+  },
+  {
+    "scenario": "A prominent fan group is planning a protest against your 'boring' style of football, even though you're getting results.",
+    "optionA": "Invite the leaders for a private discussion.",
+    "optionB": "Release a statement defending your methods.",
+    "effectsA": [5, 10, 0, -0.05],
+    "effectsB": [-5, -10, 5, 0.05]
+  },
+  {
+    "scenario": "A key player is caught in a nightclub the night before a big game. The media is having a field day.",
+    "optionA": "Drop him from the squad entirely.",
+    "optionB": "Start him to show your faith in him.",
+    "effectsA": [10, 10, -15, 0.0],
+    "effectsB": [-15, -5, 15, 0.1]
+  },
+  {
+    "scenario": "Your team has been hit by a nasty virus, ruling out half of your first team for the next match.",
+    "optionA": "Request the league to postpone the match.",
+    "optionB": "Field a team of youngsters and reserves.",
+    "effectsA": [5, 5, -10, 0.0],
+    "effectsB": [-5, -5, 15, -0.1]
+  },
+  {
+    "scenario": "The club's new crypto sponsor is demanding you feature their logo more prominently. The fans hate it.",
+    "optionA": "Agree and wear a giant bitcoin on your training top.",
+    "optionB": "Politely decline and risk the sponsorship deal.",
+    "effectsA": [-10, 15, -5, 0.1],
+    "effectsB": [10, -20, 5, -0.05]
+  },
+  {
+    "scenario": "Your star striker has released a controversial tell-all autobiography, upsetting the dressing room.",
+    "optionA": "Fine the player and make a public statement.",
+    "optionB": "Downplay the issue and handle it internally.",
+    "effectsA": [-5, -5, 10, 0.05],
+    "effectsB": [5, 5, -10, -0.05]
+  },
+  {
+    "scenario": "A sudden heatwave has made the pitch unplayable. The league is forcing you to play anyway.",
+    "optionA": "Complain to the media about player safety.",
+    "optionB": "Quietly rotate your squad to use players with better stamina.",
+    "effectsA": [5, -10, 0, 0.05],
+    "effectsB": [-5, 10, 5, -0.05]
+  },
+  {
+    "scenario": "A key player is having a nightmare game. He's a fan favorite.",
+    "optionA": "Substitute him at halftime.",
+    "optionB": "Give him until 60 minutes to improve.",
+    "effectsA": [-5, 3, 0, 0.0],
+    "effectsB": [0, -5, 5, 0.0]
+  },
+  {
+    "scenario": "The opposition changes to a formation that's causing your team problems.",
+    "optionA": "Immediately match their formation change.",
+    "optionB": "Stick with your original game plan and trust your players.",
+    "effectsA": [-2, 0, 2, 0.05],
+    "effectsB": [2, 0, -2, -0.05]
+  },
+  {
+    "scenario": "You're dominating possession but can't seem to create any clear chances.",
+    "optionA": "Switch to a more direct, long-ball attacking style.",
+    "optionB": "Stay patient and trust the chances will come.",
+    "effectsA": [0, 5, -2, 0.1],
+    "effectsB": [0, -5, 2, -0.1]
+  },
+  {
+    "scenario": "Your captain is constantly arguing with the referee and is close to getting a second yellow card.",
+    "optionA": "Substitute him to avoid going down to 10 men.",
+    "optionB": "Tell him to calm down but keep him on the pitch.",
+    "effectsA": [-8, 5, 0, -0.05],
+    "effectsB": [5, -5, 0, 0.05]
+  },
+  {
+    "scenario": "A viral TikTok video shows your players mocking your training drills behind your back.",
+    "optionA": "Make the players involved issue a public apology.",
+    "optionB": "Laugh it off in the press, calling it 'team bonding'.",
+    "effectsA": [-5, 8, -5, 0.0],
+    "effectsB": [5, -8, 5, 0.0]
+  }
+]

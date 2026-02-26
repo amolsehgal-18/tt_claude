@@ -98,7 +98,7 @@ class _MatchRadarState extends State<MatchRadar>
                                   color: dotColor, shape: BoxShape.circle),
                             ),
                           );
-                        }).toList()
+                        })
                       ]);
                     })
               ],
