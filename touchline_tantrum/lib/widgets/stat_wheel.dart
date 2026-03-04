@@ -71,7 +71,7 @@ class _WheelPainter extends CustomPainter {
   void _drawSlice(Canvas canvas, Offset center, double maxRadius, double pct,
       double startAngleDeg, double sweepAngleDeg, Color color) {
     final paint = Paint()
-      ..color = color.withValues(alpha: 0.8)
+      ..color = color.withAlpha(204)
       ..style = PaintingStyle.fill;
 
     final radius = maxRadius * pct.clamp(0.1, 1.0);

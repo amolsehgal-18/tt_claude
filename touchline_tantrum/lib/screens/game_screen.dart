@@ -584,7 +584,7 @@ class _GameScreenState extends State<GameScreen> {
         if (_lastMatchWon) {
           HapticFeedback.heavyImpact();
         } else {
-          HapticFeedback.vibrate();
+          HapticFeedback.mediumImpact();
         }
       }
       for (var team in leagueTable) {
@@ -1157,7 +1157,7 @@ class _GameScreenState extends State<GameScreen> {
                 _statHeader("Board Verdict"),
                 const SizedBox(height: 5),
                 Text(
-                  '"''${FeedbackProvider.getFeedback("board", isWon, boardTrust, objectiveMet)}''"'
+                  FeedbackProvider.getFeedback("board", isWon, boardTrust, objectiveMet)
                   ,textAlign: TextAlign.start,
                   style: const TextStyle(
                       color: Colors.white, fontStyle: FontStyle.italic, fontSize: 13),
@@ -1166,7 +1166,7 @@ class _GameScreenState extends State<GameScreen> {
                 _statHeader("Dressing Room Atmosphere"),
                 const SizedBox(height: 5),
                 Text(
-                  '"''${FeedbackProvider.getFeedback("squad", isWon, dressingRoom, objectiveMet)}''"'
+                  FeedbackProvider.getFeedback("squad", isWon, dressingRoom, objectiveMet)
                   ,textAlign: TextAlign.start,
                   style: const TextStyle(
                       color: Colors.white, fontStyle: FontStyle.italic, fontSize: 13),
@@ -1175,7 +1175,7 @@ class _GameScreenState extends State<GameScreen> {
                 _statHeader("Fan Reaction"),
                 const SizedBox(height: 5),
                 Text(
-                  '"''${FeedbackProvider.getFeedback("fans", isWon, fanSupport, objectiveMet)}''"'
+                  FeedbackProvider.getFeedback("fans", isWon, fanSupport, objectiveMet)
                   ,textAlign: TextAlign.start,
                   style: const TextStyle(
                       color: Colors.white, fontStyle: FontStyle.italic, fontSize: 13),

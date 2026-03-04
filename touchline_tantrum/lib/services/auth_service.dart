@@ -34,7 +34,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _mapFirebaseError(e);
     } catch (e) {
-      throw AuthException('Google sign-in failed. Please try again.');
+      throw const AuthException('Google sign-in failed. Please try again.');
     }
   }
 
@@ -61,7 +61,7 @@ class AuthService {
       if (e.code == AuthorizationErrorCode.canceled) return null;
       throw AuthException('Apple sign-in failed: ${e.message}');
     } catch (e) {
-      throw AuthException('Apple sign-in failed. Please try again.');
+      throw const AuthException('Apple sign-in failed. Please try again.');
     }
   }
 
@@ -73,7 +73,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       throw _mapFirebaseError(e);
     } catch (e) {
-      throw AuthException('Could not start guest session. Please try again.');
+      throw const AuthException('Could not start guest session. Please try again.');
     }
   }
 
@@ -92,15 +92,15 @@ class AuthService {
   AuthException _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
       case 'network-request-failed':
-        return AuthException('No internet connection. Please check your network.');
+        return const AuthException('No internet connection. Please check your network.');
       case 'account-exists-with-different-credential':
-        return AuthException('An account already exists with this email using a different sign-in method.');
+        return const AuthException('An account already exists with this email using a different sign-in method.');
       case 'invalid-credential':
-        return AuthException('Sign-in failed. Please try again.');
+        return const AuthException('Sign-in failed. Please try again.');
       case 'operation-not-allowed':
-        return AuthException('This sign-in method is not enabled. Please contact support.');
+        return const AuthException('This sign-in method is not enabled. Please contact support.');
       case 'user-disabled':
-        return AuthException('This account has been disabled.');
+        return const AuthException('This account has been disabled.');
       default:
         return AuthException(e.message ?? 'Authentication failed. Please try again.');
     }

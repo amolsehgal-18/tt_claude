@@ -49,7 +49,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.95),
+      color: Colors.black.withAlpha(242),
       child: SafeArea(
         child: Column(
           children: [

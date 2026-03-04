@@ -71,7 +71,7 @@ Your record signing hasn't scored in 8 games. Pundits are calling for his head.;
 
     final pressureContext = pressurePoints.isEmpty
         ? 'No critical pressures — stable situation.'
-        : pressurePoints.join('. ') + '.';
+        : '${pressurePoints.join('. ')}.';
 
     final recentList = recentScenarios.isEmpty
         ? 'None yet.'

@@ -120,8 +120,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeThumbColor: kNeonYellow,
-          activeTrackColor: kNeonYellow.withValues(alpha: 0.5),
+          thumbColor: WidgetStateProperty.all(kNeonYellow),
+          trackColor: WidgetStateProperty.all(kNeonYellow.withAlpha(100)),
         ),
       ],
     );
