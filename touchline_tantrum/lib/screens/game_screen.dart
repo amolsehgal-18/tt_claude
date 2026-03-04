@@ -8,6 +8,7 @@ import 'dart:math';
 import 'dart:convert';
 
 import 'package:screenshot/screenshot.dart';
+import '../services/ai_service.dart';
 import '../services/share_service.dart';
 import '../utils/constants.dart';
 import '../utils/settings_manager.dart';
@@ -36,6 +37,12 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   final ShareService _shareService = ShareService();
+  final AIService _aiService = AIService();
+  final List<GameCardData> _aiBuffer = [];
+  bool _isAiFetching = false;
+  final List<String> _recentScenarioTexts = [];
+  static const int _kAiBufferSize = 3;
+
   SharedPreferences? _prefs;
   late int matchesPlayed, matchesTotal, currentGW, cardsUntilMatch, wildcards;
   int wins = 0, draws = 0, losses = 0;
@@ -95,6 +102,7 @@ class _GameScreenState extends State<GameScreen> {
           _updateMood();
           _nextCard();
         });
+        _fillAIBuffer();
         return;
       } else {
         debugPrint("Session mismatch - starting fresh game");
@@ -108,12 +116,44 @@ class _GameScreenState extends State<GameScreen> {
     wildcards = 3;
     _initLeague();
     _loadCSV();
+    _fillAIBuffer();
   }
 
   @override
   void dispose() {
     _gameTimer?.cancel();
     super.dispose();
+  }
+
+  /// Pre-fetches AI-generated scenario cards in the background so there is no
+  /// loading pause when the player reaches the next card. Falls back to the
+  /// CSV deck silently if the API key is not set or the call fails.
+  void _fillAIBuffer() {
+    if (_isAiFetching || _aiBuffer.length >= _kAiBufferSize) return;
+    _isAiFetching = true;
+    _aiService
+        .generateScenario(
+          boardTrust: boardTrust,
+          fanSupport: fanSupport,
+          dressingRoom: dressingRoom,
+          aggression: aggression,
+          lastMatchWon: _lastMatchWon,
+          teamName: widget.session.userName,
+          leaguePosition: _getUserRank(),
+          gamesRemaining: matchesTotal - matchesPlayed,
+          gameMode: widget.session.id,
+          recentScenarios: List.unmodifiable(_recentScenarioTexts.take(5)),
+        )
+        .then((card) {
+          _isAiFetching = false;
+          if (!mounted) return;
+          if (card != null) setState(() => _aiBuffer.add(card));
+          // Keep filling until buffer is full
+          if (_aiBuffer.length < _kAiBufferSize) _fillAIBuffer();
+        })
+        .catchError((_) {
+          _isAiFetching = false;
+        });
   }
 
   Future<void> _loadCSV() async {
@@ -240,19 +280,26 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
     if (cardsUntilMatch > 0) {
+      // Pick next card — prefer AI buffer, fall back to CSV deck
+      GameCardData nextCard;
+      if (_aiBuffer.isNotEmpty) {
+        nextCard = _aiBuffer.removeAt(0);
+        _recentScenarioTexts.insert(0, nextCard.text);
+        if (_recentScenarioTexts.length > 10) _recentScenarioTexts.removeLast();
+      } else if (_masterDeck.isNotEmpty) {
+        nextCard = (List<GameCardData>.from(_masterDeck)..shuffle()).first;
+      } else {
+        nextCard = GameCardData("Season Finale", "STAY FOCUSED", "CONTINUE", 0, 0, 0, 0.05);
+      }
       setState(() {
         isMatchDay = false;
-        if (_masterDeck.isEmpty) {
-          activeScenario = GameCardData(
-              "Season Finale", "STAY FOCUSED", "CONTINUE", 0, 0, 0, 0.05);
-        } else {
-          activeScenario =
-              (List<GameCardData>.from(_masterDeck)..shuffle()).first;
-        }
+        activeScenario = nextCard;
         _timerVal = 1.0;
         _isProcessing = false;
-        _startPressureTimer();
       });
+      _startPressureTimer();
+      // Replenish buffer in the background
+      _fillAIBuffer();
     } else {
       _startNitroReel();
     }
@@ -297,15 +344,18 @@ class _GameScreenState extends State<GameScreen> {
     }
     AudioManager.instance.playSwipeSound(isLeft);
 
-    int m = isLeft ? 1 : -1;
     setState(() {
-      boardTrust = (boardTrust + (c.boardImpact * m / 100)).clamp(0.01, 1.0);
-      fanSupport = (fanSupport + (c.fanImpact * m / 100)).clamp(0.01, 1.0);
-      dressingRoom =
-          (dressingRoom + (c.dressingRoomImpact * m / 100)).clamp(0.01, 1.0);
-      aggression =
-          (aggression + (isLeft ? c.aggressionShift : -c.aggressionShift))
-              .clamp(0.1, 1.0);
+      if (isLeft) {
+        boardTrust = (boardTrust + c.boardImpactLeft / 100).clamp(0.01, 1.0);
+        fanSupport = (fanSupport + c.fanImpactLeft / 100).clamp(0.01, 1.0);
+        dressingRoom = (dressingRoom + c.dressingRoomImpactLeft / 100).clamp(0.01, 1.0);
+        aggression = (aggression + c.aggressionShiftLeft).clamp(0.1, 1.0);
+      } else {
+        boardTrust = (boardTrust + c.boardImpactRight / 100).clamp(0.01, 1.0);
+        fanSupport = (fanSupport + c.fanImpactRight / 100).clamp(0.01, 1.0);
+        dressingRoom = (dressingRoom + c.dressingRoomImpactRight / 100).clamp(0.01, 1.0);
+        aggression = (aggression + c.aggressionShiftRight).clamp(0.1, 1.0);
+      }
       cardsUntilMatch--;
       _updateMood();
     });
@@ -505,10 +555,10 @@ class _GameScreenState extends State<GameScreen> {
         .toList();
     if (ops.isEmpty) return;
 
-    // Ensure opponent logo is different from user's
+    // Prefer an opponent whose logo differs from the user's; give up after 10 tries
     Team potentialOpponent = ops[Random().nextInt(ops.length)];
-    while (potentialOpponent.iconSeed == widget.session.userLogo) {
-        potentialOpponent = ops[Random().nextInt(ops.length)];
+    for (int i = 0; i < 10 && potentialOpponent.iconSeed == widget.session.userLogo; i++) {
+      potentialOpponent = ops[Random().nextInt(ops.length)];
     }
     nextOpponent = potentialOpponent;
 }
@@ -575,12 +625,11 @@ class _GameScreenState extends State<GameScreen> {
         _lastMatchWon = true;
         wins++;
         losses--;
+        // Points are NOT added here — they are added on the follow-up swipe
+        // below when won == true, preventing a double-count.
         activeScenario = GameCardData(
             "WIN! (VAR OVERTURN)", "STAY HUMBLE", "CELEBRATE", 0, 0, 0, 0,
             isMatchResult: true);
-        leagueTable
-            .where((t) => t.name == widget.session.userName.toUpperCase())
-            .forEach((t) => t.points += 3);
         _sortLeague();
         _isProcessing = false;
         _updateMood();
@@ -592,9 +641,8 @@ class _GameScreenState extends State<GameScreen> {
         leagueTable
             .where((t) => t.name == widget.session.userName.toUpperCase())
             .forEach((t) => t.points += 3);
-      } else {
-        draws++;
       }
+      // losses was already incremented in _triggerReelResult; no extra counting here
 
       _sortLeague();
       matchesPlayed++;

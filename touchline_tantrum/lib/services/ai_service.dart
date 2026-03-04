@@ -1,115 +1,199 @@
-import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import '../models/game_card_data.dart';
+import '../utils/api_config.dart';
 
 class AIService {
-  Future<String> _generateContent(String prompt) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+  static const String _apiUrl = 'https://api.anthropic.com/v1/messages';
+  static const String _model = 'claude-haiku-4-5-20251001';
 
-    // Simulate a wider variety of responses based on the new prompt structure
-    if (prompt.contains("Create a unique scenario")) {
-      final themes = ["Player Ego", "Board Pressure", "Fan Relations", "Media Spotlight", "Club Finances"];
-      final selectedTheme = themes.firstWhere((t) => prompt.contains(t), orElse: () => "General");
+  static const String _systemPrompt = '''You are a scenario designer for "Touchline Tantrum", a mobile football manager card-swipe game.
 
-      final responses = {
-        "Player Ego": [
-          "Your star striker demands a new contract with a wage that would break your club's structure.;Give in to his demands to keep him happy;Refuse and risk him demanding a transfer;-15,5,10,0.05;10,-10,-15,-0.05",
-          "A veteran player publicly criticizes your tactics after a poor result.;Fine the player and drop him for the next match;Have a private one-on-one to clear the air;-5,-5,10,0.05;5,5,-10,-0.05"
-        ],
-        "Board Pressure": [
-          "The board insists you sign a specific, aging foreign player for marketing reasons.;Sign the player to please the board;Argue for a younger, better player who fits your system;-10,15,-5,0.0;10,-5,-5,-0.05",
-          "The Chairman's son has been offered a trial. He is, to be blunt, terrible.;Offer him a short-term youth contract;Politely explain he isn't ready for professional football;-15,0,5,0.0;20,-5,-5,-0.1"
-        ],
-        "Fan Relations": [
-          "A prominent fan group is protesting high ticket prices.;Promise to freeze prices for next season;Release a statement explaining the club's financial needs;-5,15,-5,0.0;5,-20,5,0.0"
-        ],
-        "Media Spotlight": [
-          "A tabloid newspaper has published photos of you on a night out before a big game.;Hold a press conference to apologize and refocus;Ignore the story and maintain a dignified silence;-5,-10,5,0.05;5,5,-5,-0.05"
-        ],
-        "General": [
-          "The club's new crypto sponsor is demanding you feature their logo more prominently. The fans hate it.;Agree and wear a giant bitcoin on your training top;Politely decline and risk the sponsorship deal;-10,15,-5,0.1;10,-20,5,-0.05"
-        ]
-      };
+GAME MECHANICS (understand these to write mechanically meaningful cards):
+- Three stats (0–100%): Board Trust, Fan Support, Squad Morale — the "Tension Triangle"
+- If ANY stat hits 0%, the manager is instantly sacked regardless of league position
+- Aggression (0.10–1.0): directly controls match win probability and is shown as live betting odds
+  Win probability = 0.35 + (aggression × 0.15) + (squad_morale_fraction × 0.15) + strength_factor
+  Low aggression → safer style but lower win chance. High aggression → risky but higher win chance.
+- Match odds formula: Win odds = (2.20 − aggression × 0.8), Loss odds = (2.40 + aggression × 1.2)
+  So aggression 0.8 → 1.56 win odds (heavy favourite). Aggression 0.2 → 2.04 win odds (slight favourite).
+- Manager stress is derived from average of all three triangle stats combined with recent match result
 
-      final responseList = responses[selectedTheme] ?? responses["General"]!;
-      // To avoid using dart:math, we'll just return the first element for this simulation
-      return responseList[0];
-    } else if (prompt.contains("Generate 3 short, dramatic commentary lines")) {
-      return "The whistle blows and we are underway! • A crunching tackle near the halfway line, the ref keeps his cards in his pocket. • It's all over, a hard-fought victory on the road!";
-    } else if (prompt.contains("Act as the Chairman")) {
-      return "The board is bitterly disappointed with this season's performance. Finishing so low in the table is unacceptable, and the dwindling attendance figures have not gone unnoticed. We will be conducting a full review of the club's management structure.";
-    }
-    return "No response generated.";
-  }
+SCENARIO RULES:
+- Both options MUST be genuine dilemmas — no clearly correct answer, both carry real costs
+- Each scenario must be specific and vivid: name a situation, an archetype, a clash, a decision
+- Scenarios should feel like real football management headlines (tabloid, training ground, boardroom)
+- Option A label: 3–4 words, the bold/public/aggressive call
+- Option B label: 3–4 words, the careful/private/composed call
+- Think carefully about WHICH stats move and WHY — the impacts must make narrative sense
+- Aggression shifts reflect whether the decision makes you play more attacking or defensively cautious
+- Range: Board/Fans/Squad are integers −20 to +20. Aggression is decimal −0.10 to +0.10
+- Impacts are DIRECT — positive means that stat goes UP, negative means it goes DOWN
+- Do NOT mirror Option B as the inverse of Option A — they should have independent, asymmetric effects
+- A bold public call may boost fans but anger the board. Staying quiet may protect the dressing room but lose public trust. Think through each stat independently.
 
-  Future<String> generateScenario({
-    required double fanSupport,
+OUTPUT FORMAT (exactly one line, no markdown, no extra text):
+Scenario Text;Option A label;Option B label;BoardA,FansA,SquadA,AggroA;BoardB,FansB,SquadB,AggroB
+
+EXAMPLE:
+Your record signing hasn't scored in 8 games. Pundits are calling for his head.;Drop him publicly;Back him in press;12,-8,-10,0.04;-10,8,12,-0.03''';
+
+  /// Generates a context-aware scenario card using the Claude API.
+  /// Returns null if the API key is not configured or the call fails
+  /// (caller should fall back to the CSV deck).
+  Future<GameCardData?> generateScenario({
     required double boardTrust,
+    required double fanSupport,
     required double dressingRoom,
+    required double aggression,
     required bool lastMatchWon,
     required String teamName,
     required int leaguePosition,
-    required String theme,
+    required int gamesRemaining,
+    required String gameMode,
     required List<String> recentScenarios,
-    required List<String> existingScenarios,
   }) async {
-    final prompt = '''
-    You are a football management game designer. Create a unique scenario for the manager of $teamName.
-    The chosen theme for this scenario is: **$theme**.
+    if (kAnthropicApiKey.isEmpty || kAnthropicApiKey == 'YOUR_ANTHROPIC_API_KEY') {
+      return null;
+    }
 
-    Current context:
-    - League Position: $leaguePosition
-    - Fan Support: ${(fanSupport * 100).toInt()}%
-    - Board Trust: ${(boardTrust * 100).toInt()}%
-    - Dressing Room Morale: ${(dressingRoom * 100).toInt()}%
-    - Last Match Result: ${lastMatchWon ? "Won" : "Lost/Drew"}
+    final winOdds = (2.20 - aggression * 0.8).toStringAsFixed(2);
+    final lossOdds = (2.40 + aggression * 1.2).toStringAsFixed(2);
 
-    **Crucially, do not generate a scenario similar to any of the following recent ones:**
-    ${recentScenarios.map((s) => "- $s").join('\n')}
+    // Identify pressure points to make scenarios more contextually dramatic
+    final pressurePoints = <String>[];
+    if (boardTrust < 0.30) pressurePoints.add('Board Trust critically low (${(boardTrust * 100).toInt()}%)');
+    if (fanSupport < 0.30) pressurePoints.add('Fan Support critically low (${(fanSupport * 100).toInt()}%)');
+    if (dressingRoom < 0.30) pressurePoints.add('Squad Morale critically low (${(dressingRoom * 100).toInt()}%)');
+    if (gamesRemaining <= 4) pressurePoints.add('Season climax — only $gamesRemaining games left');
+    if (!lastMatchWon && boardTrust < 0.50) pressurePoints.add('Board patience wearing thin after recent result');
 
-    Your task is to create a compelling dilemma based on the theme and context.
-    Return a single string with each part separated by a semicolon, in this exact format:
-    Scenario Text;Option A;Option B;BoardA,FanA,SquadA,AggroA;BoardB,FanB,SquadB,AggroB
-    
-    - The impact values must be integers between -20 and 20.
-    - The Aggro (aggression) values must be decimals between -0.1 and 0.1.
-    ''';
+    final pressureContext = pressurePoints.isEmpty
+        ? 'No critical pressures — stable situation.'
+        : pressurePoints.join('. ') + '.';
 
-    return await _generateContent(prompt);
+    final recentList = recentScenarios.isEmpty
+        ? 'None yet.'
+        : recentScenarios.map((s) => '- $s').join('\n');
+
+    final gameModeLabel = switch (gameMode) {
+      'bottle' => "DON'T BOTTLE IT (must finish 1st)",
+      'top4' => 'TOP 4 IS LAVA (must finish top 4)',
+      'escape' => 'THE GREAT ESCAPE (avoid relegation)',
+      'career' => 'FULL CAREER (stay employed)',
+      _ => gameMode,
+    };
+
+    final userPrompt = '''CURRENT GAME STATE — Team: ${teamName.toUpperCase()}
+- Mode: $gameModeLabel
+- League position: $leaguePosition of 20 | Games remaining: $gamesRemaining
+- Board Trust: ${(boardTrust * 100).toInt()}% | Fan Support: ${(fanSupport * 100).toInt()}% | Squad Morale: ${(dressingRoom * 100).toInt()}%
+- Aggression: ${aggression.toStringAsFixed(2)} → Live odds: $winOdds WIN | 3.40 DRAW | $lossOdds LOSS
+- Last match: ${lastMatchWon ? "WON" : "LOST / DREW"}
+- Pressure context: $pressureContext
+
+RECENT SCENARIOS (do NOT repeat these themes or situations):
+$recentList
+
+Generate ONE fresh, specific scenario card now. Remember: make both options genuinely hard to choose between.''';
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_apiUrl),
+            headers: {
+              'x-api-key': kAnthropicApiKey,
+              'anthropic-version': '2023-06-01',
+              'content-type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': _model,
+              'max_tokens': 150,
+              'system': _systemPrompt,
+              'messages': [
+                {'role': 'user', 'content': userPrompt},
+              ],
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final contentList = data['content'] as List?;
+        final text = contentList
+            ?.whereType<Map>()
+            .where((c) => c['type'] == 'text')
+            .map((c) => c['text'] as String?)
+            .firstWhere((t) => t != null, orElse: () => null);
+        if (text != null) {
+          return _parse(text.trim());
+        }
+      } else {
+        debugPrint('AIService: API error ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('AIService: fetch failed — $e');
+    }
+    return null;
   }
 
-  Future<String> generateMatchCommentary({
-    required String teamName,
-    required String opponentName,
-    required double teamStrength,
-    required double opponentStrength,
-  }) async {
-    final prompt = '''
-    You are an excited football commentator. Generate 3 short, dramatic commentary lines for a match between $teamName and $opponentName.
-    $teamName's strength is $teamStrength and $opponentName's is $opponentStrength.
-    The commentary should reflect this power dynamic.
+  /// Parses the pipe-separated scenario format returned by Claude.
+  /// Format: ScenarioText;OptionA;OptionB;BoardA,FansA,SquadA,AggroA;BoardB,FansB,SquadB,AggroB
+  GameCardData? _parse(String raw) {
+    // Strip any markdown code fences Claude might add
+    final cleaned = raw.replaceAll('```', '').replaceAll('`', '').trim();
 
-    Return a single string with the three lines separated by ' • '.
-    ''';
-    return await _generateContent(prompt);
-  }
+    // Find the line that matches the expected format (last one wins in case of preamble)
+    String? candidate;
+    for (final line in cleaned.split('\n').reversed) {
+      final trimmed = line.trim();
+      if (trimmed.contains(';') && trimmed.split(';').length >= 5) {
+        candidate = trimmed;
+        break;
+      }
+    }
+    if (candidate == null) return null;
 
-  Future<String> generateEndOfSeasonFeedback({
-    required int finalPosition,
-    required int objective,
-    required double fanSupport,
-    required bool wasSacked,
-  }) async {
-    final prompt = '''
-    Act as the Chairman of a football club. I was the manager this season.
-    
-    Here is a summary of my performance:
-    - Final League Position: $finalPosition
-    - Objective: Finish in the top $objective
-    - Final Fan Support: ${(fanSupport * 100).toInt()}%
-    - My final status: ${wasSacked ? "Sacked" : "Season Ended"}
+    final parts = candidate.split(';');
+    if (parts.length < 5) return null;
 
-    Write ONE short, formal, and emotionally charged "Board Verdict" statement for me based on my performance.
-    Do not write separate verdicts for fans or squad.
-    ''';
-    return await _generateContent(prompt);
+    final scenarioText = parts[0].trim();
+    final leftOpt = parts[1].trim();
+    final rightOpt = parts[2].trim();
+    if (scenarioText.isEmpty || leftOpt.isEmpty || rightOpt.isEmpty) return null;
+
+    final aRaw = parts[3].trim().split(',');
+    final bRaw = parts[4].trim().split(',');
+    if (aRaw.length < 4 || bRaw.length < 4) return null;
+
+    final boardA = int.tryParse(aRaw[0].trim());
+    final fanA = int.tryParse(aRaw[1].trim());
+    final squadA = int.tryParse(aRaw[2].trim());
+    final aggroA = double.tryParse(aRaw[3].trim());
+
+    final boardB = int.tryParse(bRaw[0].trim());
+    final fanB = int.tryParse(bRaw[1].trim());
+    final squadB = int.tryParse(bRaw[2].trim());
+    final aggroB = double.tryParse(bRaw[3].trim());
+
+    if (boardA == null || fanA == null || squadA == null || aggroA == null ||
+        boardB == null || fanB == null || squadB == null || aggroB == null) {
+      return null;
+    }
+
+    return GameCardData.withIndependentImpacts(
+      text: scenarioText,
+      leftOption: leftOpt,
+      rightOption: rightOpt,
+      boardImpactLeft: boardA.clamp(-20, 20),
+      fanImpactLeft: fanA.clamp(-20, 20),
+      dressingRoomImpactLeft: squadA.clamp(-20, 20),
+      aggressionShiftLeft: aggroA.clamp(-0.10, 0.10),
+      boardImpactRight: boardB.clamp(-20, 20),
+      fanImpactRight: fanB.clamp(-20, 20),
+      dressingRoomImpactRight: squadB.clamp(-20, 20),
+      aggressionShiftRight: aggroB.clamp(-0.10, 0.10),
+    );
   }
 }
