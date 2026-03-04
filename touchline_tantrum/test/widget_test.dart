@@ -1,30 +1,36 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:touchline_tantrum/screens/auth_screen.dart';
+import './mock_firebase.dart';
 
-import 'package:touchline_tantrum/main.dart';
+// Import the mock Firebase setup
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  // Set up the mock Firebase services before any tests run.
+  setupFirebaseAuthMocks();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  // Initialize the mock Firebase app before each test.
+  setUpAll(() async {
+    await Firebase.initializeApp();
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('AuthScreen has a title and sign in options', (WidgetTester tester) async {
+    // Build the AuthScreen widget directly, wrapped in a MaterialApp.
+    await tester.pumpWidget(const MaterialApp(
+      home: AuthScreen(),
+    ));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // The first frame might be a loading indicator or other async operations,
+    // so we pump and settle to wait for the UI to stabilize.
+    await tester.pumpAndSettle();
+
+    // Verify that the main title is present.
+    expect(find.text('TOUCHLINE'), findsOneWidget);
+    expect(find.text('TANTRUM'), findsOneWidget);
+
+    // Verify that the 'Play as Guest' option is visible.
+    expect(find.text('Play as Guest'), findsOneWidget);
   });
 }

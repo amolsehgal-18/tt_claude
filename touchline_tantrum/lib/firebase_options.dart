@@ -26,7 +26,6 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // ✅ Android — fully configured from google-services.json
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCiXs4LLAkfJE-TaJvDSGE9RwjCuFpH-ns',
     appId: '1:364508519543:android:e79a03a19cb0a8e94b7a72',
@@ -35,46 +34,51 @@ class DefaultFirebaseOptions {
     storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
   );
 
+  // ✅ Android — fully configured from google-services.json
+
   // ⚠️ iOS — run `flutterfire configure` to fill in the real API key,
-  // or download GoogleService-Info.plist from Firebase Console and extract it.
+
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_IOS_API_KEY',
+    apiKey: 'AIzaSyD5JnKhVeqZyy0dtBN0z_5OyV6MCgiaWS8',
     appId: '1:364508519543:ios:0bfbe7c3a2415ec24b7a72',
     messagingSenderId: '364508519543',
     projectId: 'studio-3702759365-fe51c',
     storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
-    iosClientId: 'REPLACE_WITH_IOS_CLIENT_ID',
-    iosBundleId: 'com.example.touchlineTantrum',
+    iosBundleId: 'com.amol.touchlineTantrum',
   );
 
-  // ⚠️ macOS — run `flutterfire configure` to fill in
+  // or download GoogleService-Info.plist from Firebase Console and extract it.
+
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_MACOS_API_KEY',
+    apiKey: 'AIzaSyD5JnKhVeqZyy0dtBN0z_5OyV6MCgiaWS8',
     appId: '1:364508519543:ios:64e43658134b33634b7a72',
     messagingSenderId: '364508519543',
     projectId: 'studio-3702759365-fe51c',
     storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
-    iosClientId: 'REPLACE_WITH_MACOS_CLIENT_ID',
     iosBundleId: 'com.example.touchlineTantrum',
   );
 
-  // ⚠️ Web — run `flutterfire configure` to fill in
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_WEB_API_KEY',
-    appId: '1:364508519543:web:919c574f2ceaead24b7a72',
-    messagingSenderId: '364508519543',
-    projectId: 'studio-3702759365-fe51c',
-    storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
-    authDomain: 'studio-3702759365-fe51c.firebaseapp.com',
-  );
+  // ⚠️ macOS — run `flutterfire configure` to fill in
 
-  // ⚠️ Windows — run `flutterfire configure` to fill in
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'REPLACE_WITH_WINDOWS_API_KEY',
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyChL0CaMWVdEQ1KR2VkJYOy23NY5N3ACEI',
     appId: '1:364508519543:web:1d6b90369d382a094b7a72',
     messagingSenderId: '364508519543',
     projectId: 'studio-3702759365-fe51c',
-    storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
     authDomain: 'studio-3702759365-fe51c.firebaseapp.com',
+    storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
   );
+
+  // ⚠️ Web — run `flutterfire configure` to fill in
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyChL0CaMWVdEQ1KR2VkJYOy23NY5N3ACEI',
+    appId: '1:364508519543:web:1d6b90369d382a094b7a72',
+    messagingSenderId: '364508519543',
+    projectId: 'studio-3702759365-fe51c',
+    authDomain: 'studio-3702759365-fe51c.firebaseapp.com',
+    storageBucket: 'studio-3702759365-fe51c.firebasestorage.app',
+  );
+
+  // ⚠️ Windows — run `flutterfire configure` to fill in
 }
