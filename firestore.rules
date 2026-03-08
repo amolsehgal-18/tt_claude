@@ -1,0 +1,25 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/gameSaves/{gameSaveId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /leaderboard/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
+    match /scenarioCards/{cardId} {
+      allow read: if isSignedIn();
+    }
+  }
+}

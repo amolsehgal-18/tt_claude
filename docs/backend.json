@@ -1,0 +1,61 @@
+
+{
+  "entities": {
+    "GameSave": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GameSave",
+      "type": "object",
+      "description": "Represents the current state of an ongoing football manager game.",
+      "properties": {
+        "id": { "type": "string" },
+        "managerName": { "type": "string" },
+        "userTeam": { "type": "string" },
+        "boardSupport": { "type": "number" },
+        "fanSupport": { "type": "number" },
+        "dressingRoom": { "type": "number" },
+        "aggression": { "type": "number" },
+        "currentLeaguePosition": { "type": "number" },
+        "points": { "type": "number" },
+        "matchesPlayed": { "type": "number" },
+        "cardsSeen": { "type": "number" },
+        "wins": { "type": "number" },
+        "draws": { "type": "number" },
+        "losses": { "type": "number" },
+        "isSacked": { "type": "boolean" },
+        "isSeasonEnd": { "type": "boolean" },
+        "mode": { "type": "string" },
+        "durationIndex": { "type": "number" },
+        "history": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "managerName", "userTeam", "boardSupport", "fanSupport", "dressingRoom", "aggression", "currentLeaguePosition", "points", "matchesPlayed", "wins", "draws", "losses", "isSacked", "isSeasonEnd", "mode", "durationIndex", "history"]
+    },
+    "LeaderboardEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LeaderboardEntry",
+      "type": "object",
+      "description": "A global high-score entry for a manager.",
+      "properties": {
+        "userId": { "type": "string" },
+        "managerName": { "type": "string" },
+        "teamName": { "type": "string" },
+        "totalWins": { "type": "number" },
+        "bestPoints": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "managerName", "teamName", "totalWins", "bestPoints", "timestamp"]
+    }
+  },
+  "auth": {
+    "providers": ["anonymous"]
+  },
+  "firestore": {
+    "/users/{userId}/gameSaves/{gameSaveId}": {
+      "schema": "GameSave",
+      "description": "User specific game saves."
+    },
+    "/leaderboard/{userId}": {
+      "schema": "LeaderboardEntry",
+      "description": "Global leaderboard entries indexed by user ID."
+    }
+  }
+}
