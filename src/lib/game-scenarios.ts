@@ -1,13 +1,35 @@
-
 /**
  * @fileOverview Scenario data for Touchline Tantrum.
- * 
+ *
  * Each card defines impacts for:
  * 1. boardImpact: Integer (e.g. 10 = +10% Board Support)
  * 2. fanImpact: Integer (e.g. -5 = -5% Fan Support)
  * 3. dressingRoomImpact: Integer (e.g. 8 = +8% Player Morale)
  * 4. aggressionImpact: Float (e.g. 0.15 = +15% Tactical Aggression)
+ *
+ * psych.left / psych.right: Psychology axis deltas (-2 to +2)
+ * TF = Tactical Flexibility  D = Discipline  MP = Media Presence
+ * MM = Man Management        TT = Touchline Temper
+ *
+ * Archetype calibration reference:
+ * Hairdryer     → high D, high TT, low MM  | high board, low squad/fans
+ * Father Figure → high MM, low TT, high MP | high squad/fans, low board
+ * Tactician     → high TF, high D, low MP  | neutral tension triangle
+ * Showman       → high MP, high TF, low D  | high fans, low board
+ * Politician    → low TF, high D, high MM  | high board, low fans
+ * Maverick      → high TF, high TT, low D  | volatile tension triangle
  */
+
+export type PsychDelta = {
+  board: number; // -2 to +2
+  fans:  number;
+  squad: number;
+  TF:    number; // Tactical Flexibility
+  D:     number; // Discipline
+  MP:    number; // Media Presence
+  MM:    number; // Man Management
+  TT:    number; // Touchline Temper
+};
 
 export interface ScenarioCardData {
   id: string;
@@ -22,6 +44,10 @@ export interface ScenarioCardData {
   triggerCondition: string;
   gameCategory: string;
   isBreaking: boolean;
+  psych: {
+    left:  PsychDelta;
+    right: PsychDelta;
+  };
 }
 
 export const SCENARIO_CARDS: ScenarioCardData[] = [
@@ -37,7 +63,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "performance_high",
     gameCategory: "locker",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  1, fans: -1, squad: -2, TF:  0, D:  2, MP: -1, MM: -2, TT:  1 }, // Hairdryer
+      right: { board: -1, fans:  1, squad:  2, TF:  0, D: -1, MP:  1, MM:  2, TT: -1 }, // Father Figure
+    }
   },
   {
     id: "sc_002",
@@ -51,7 +81,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "performance_low",
     gameCategory: "locker",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  1, fans: -1, squad: -2, TF:  0, D:  2, MP: -1, MM: -2, TT:  2 }, // Hairdryer
+      right: { board: -1, fans:  0, squad:  1, TF:  0, D:  0, MP:  0, MM:  2, TT: -1 }, // Father Figure
+    }
   },
   {
     id: "sc_003",
@@ -65,7 +99,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "training_ground",
     triggerCondition: "any_time",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  1, fans:  0, squad: -1, TF: -1, D:  2, MP: -1, MM: -1, TT:  1 }, // Politician
+      right: { board:  0, fans:  0, squad:  0, TF:  1, D:  1, MP: -1, MM:  0, TT:  0 }, // Tactician
+    }
   },
   {
     id: "sc_004",
@@ -79,7 +117,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "new_signing",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -2, fans:  1, squad:  1, TF:  1, D: -1, MP:  0, MM:  1, TT:  1 }, // Maverick
+      right: { board:  2, fans: -1, squad: -1, TF: -1, D:  1, MP:  0, MM: -1, TT: -1 }, // Politician
+    }
   },
   {
     id: "sc_005",
@@ -93,7 +135,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "match_day",
     gameCategory: "stadium",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  1, squad: -1, TF:  1, D: -1, MP:  1, MM:  0, TT:  0 }, // Showman
+      right: { board:  0, fans: -1, squad:  0, TF: -1, D:  1, MP: -1, MM:  1, TT: -1 }, // Politician
+    }
   },
   {
     id: "sc_006",
@@ -107,7 +153,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "training_ground",
     triggerCondition: "performance_low",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  1, squad:  1, TF:  0, D: -1, MP:  0, MM:  2, TT: -1 }, // Father Figure
+      right: { board:  0, fans:  0, squad:  0, TF:  0, D:  1, MP: -1, MM:  0, TT:  0 }, // Tactician
+    }
   },
   {
     id: "sc_007",
@@ -121,7 +171,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "training_ground",
     triggerCondition: "player_injury",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  1, squad:  0, TF:  0, D: -1, MP:  1, MM:  1, TT:  0 }, // Showman
+      right: { board:  0, fans: -1, squad:  1, TF:  1, D:  1, MP: -1, MM:  0, TT: -1 }, // Tactician
+    }
   },
   {
     id: "sc_008",
@@ -135,7 +189,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "match_important",
     gameCategory: "locker",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  0, squad:  1, TF:  0, D:  0, MP:  0, MM:  2, TT: -1 }, // Father Figure
+      right: { board:  1, fans:  0, squad: -1, TF:  0, D:  2, MP:  1, MM: -2, TT:  2 }, // Hairdryer
+    }
   },
   {
     id: "sc_009",
@@ -149,7 +207,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "performance_low",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -2, fans:  1, squad:  1, TF:  1, D: -1, MP:  1, MM:  0, TT:  1 }, // Maverick
+      right: { board:  2, fans: -1, squad: -1, TF: -1, D:  1, MP:  0, MM: -1, TT: -1 }, // Politician
+    }
   },
   {
     id: "sc_010",
@@ -163,7 +225,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "any_time",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans: -1, squad:  1, TF:  0, D:  0, MP: -1, MM:  1, TT: -1 }, // Tactician
+      right: { board:  1, fans:  0, squad: -1, TF:  0, D:  2, MP:  0, MM: -2, TT:  2 }, // Hairdryer
+    }
   },
   {
     id: "sc_011",
@@ -177,7 +243,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "training_ground",
     triggerCondition: "performance_low",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  1, squad:  2, TF:  0, D: -2, MP:  0, MM:  2, TT: -2 }, // Father Figure
+      right: { board:  1, fans: -1, squad: -1, TF:  0, D:  2, MP:  0, MM: -1, TT:  2 }, // Hairdryer
+    }
   },
   {
     id: "sc_012",
@@ -191,7 +261,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "finance",
     triggerCondition: "financial_crisis",
     gameCategory: "press",
-    isBreaking: true
+    isBreaking: true,
+    psych: {
+      left:  { board:  2, fans: -1, squad:  0, TF: -1, D:  1, MP: -1, MM:  0, TT: -1 }, // Politician
+      right: { board: -2, fans:  1, squad:  0, TF:  1, D: -1, MP:  2, MM:  0, TT:  2 }, // Maverick
+    }
   },
   {
     id: "sc_013",
@@ -205,7 +279,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "performance_high",
     gameCategory: "locker",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  2, fans:  0, squad: -1, TF: -1, D:  1, MP: -1, MM: -1, TT:  0 }, // Politician
+      right: { board: -1, fans:  1, squad:  2, TF:  0, D:  0, MP:  0, MM:  2, TT: -1 }, // Father Figure
+    }
   },
   {
     id: "sc_014",
@@ -219,7 +297,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "any_time",
     gameCategory: "stadium",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  1, squad:  0, TF:  0, D: -1, MP:  2, MM:  1, TT: -1 }, // Showman
+      right: { board:  1, fans: -1, squad:  0, TF:  0, D:  1, MP: -2, MM:  0, TT:  0 }, // Tactician
+    }
   },
   {
     id: "sc_015",
@@ -233,7 +315,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "training_ground",
     triggerCondition: "any_time",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  0, squad:  1, TF:  0, D:  1, MP:  0, MM:  1, TT: -1 }, // Politician
+      right: { board:  0, fans:  0, squad: -1, TF:  1, D:  0, MP: -1, MM: -1, TT:  2 }, // Maverick
+    }
   },
   {
     id: "sc_016",
@@ -247,7 +333,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "press",
     triggerCondition: "performance_low",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans: -1, squad:  0, TF:  2, D: -1, MP:  1, MM: -1, TT:  2 }, // Maverick
+      right: { board:  0, fans:  1, squad:  1, TF: -1, D:  0, MP:  0, MM:  1, TT: -2 }, // Father Figure
+    }
   },
   {
     id: "sc_017",
@@ -261,7 +351,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "press",
     triggerCondition: "performance_high",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans:  1, squad:  1, TF:  0, D: -1, MP:  2, MM:  0, TT:  2 }, // Showman
+      right: { board:  1, fans: -1, squad:  0, TF:  0, D:  1, MP: -1, MM:  0, TT: -2 }, // Politician
+    }
   },
   {
     id: "sc_018",
@@ -275,7 +369,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "any_time",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -2, fans:  1, squad:  1, TF:  1, D: -1, MP:  1, MM:  1, TT:  1 }, // Maverick
+      right: { board:  2, fans: -1, squad: -1, TF: -1, D:  1, MP: -1, MM: -1, TT: -1 }, // Politician
+    }
   },
   {
     id: "sc_019",
@@ -289,7 +387,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "locker",
     triggerCondition: "any_time",
     gameCategory: "locker",
-    isBreaking: true
+    isBreaking: true,
+    psych: {
+      left:  { board:  1, fans: -1, squad: -1, TF: -1, D:  1, MP: -1, MM: -1, TT: -1 }, // Politician
+      right: { board:  0, fans: -1, squad: -2, TF:  1, D: -1, MP:  1, MM: -1, TT:  1 }, // Maverick
+    }
   },
   {
     id: "sc_020",
@@ -303,7 +405,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "fans",
     triggerCondition: "performance_low",
     gameCategory: "stadium",
-    isBreaking: true
+    isBreaking: true,
+    psych: {
+      left:  { board: -1, fans:  0, squad:  0, TF:  0, D: -1, MP:  2, MM:  1, TT: -1 }, // Showman
+      right: { board:  0, fans: -1, squad:  0, TF:  0, D:  1, MP: -2, MM:  0, TT:  0 }, // Tactician
+    }
   },
   {
     id: "sc_021",
@@ -317,7 +423,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "any_time",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans:  0, squad:  1, TF:  1, D: -1, MP:  0, MM:  1, TT:  0 }, // Showman
+      right: { board:  1, fans:  0, squad: -1, TF: -1, D:  1, MP:  0, MM: -1, TT:  0 }, // Politician
+    }
   },
   {
     id: "sc_022",
@@ -331,7 +441,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "any_time",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  1, fans:  0, squad: -1, TF:  0, D:  0, MP:  2, MM:  0, TT: -1 }, // Showman
+      right: { board: -1, fans:  0, squad:  1, TF:  1, D:  1, MP: -2, MM:  1, TT:  0 }, // Tactician
+    }
   },
   {
     id: "sc_023",
@@ -345,7 +459,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "scouting",
     triggerCondition: "any_time",
     gameCategory: "locker",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans:  1, squad:  1, TF:  2, D: -1, MP:  0, MM:  0, TT:  0 }, // Maverick
+      right: { board:  0, fans: -1, squad:  0, TF:  0, D:  2, MP:  0, MM:  0, TT: -1 }, // Tactician
+    }
   },
   {
     id: "sc_024",
@@ -359,7 +477,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "player_ego",
     triggerCondition: "any_time",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans:  0, squad:  2, TF:  0, D:  0, MP:  0, MM:  2, TT: -1 }, // Father Figure
+      right: { board:  1, fans:  0, squad: -1, TF:  0, D:  1, MP:  0, MM: -1, TT:  1 }, // Hairdryer
+    }
   },
   {
     id: "sc_025",
@@ -373,7 +495,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "training_ground",
     triggerCondition: "any_time",
     gameCategory: "training",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans: -1, squad:  1, TF:  1, D:  1, MP:  0, MM:  1, TT: -1 }, // Tactician
+      right: { board:  1, fans:  1, squad: -1, TF:  0, D:  0, MP:  0, MM: -1, TT:  2 }, // Hairdryer
+    }
   },
   {
     id: "sc_026",
@@ -387,7 +513,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "press",
     triggerCondition: "any_time",
     gameCategory: "press",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans: -1, squad: -1, TF: -1, D:  1, MP: -1, MM: -1, TT:  2 }, // Hairdryer
+      right: { board:  0, fans:  1, squad:  1, TF:  0, D: -1, MP:  2, MM:  1, TT: -1 }, // Showman
+    }
   },
   {
     id: "sc_027",
@@ -401,7 +531,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "board_pressure",
     triggerCondition: "performance_low",
     gameCategory: "stadium",
-    isBreaking: true
+    isBreaking: true,
+    psych: {
+      left:  { board: -1, fans: -1, squad:  0, TF:  2, D: -1, MP:  0, MM:  0, TT:  1 }, // Maverick
+      right: { board:  1, fans:  0, squad:  0, TF: -1, D:  2, MP: -1, MM:  0, TT: -1 }, // Politician
+    }
   },
   {
     id: "sc_028",
@@ -415,7 +549,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "finance",
     triggerCondition: "any_time",
     gameCategory: "stadium",
-    isBreaking: true
+    isBreaking: true,
+    psych: {
+      left:  { board: -2, fans:  2, squad:  0, TF:  0, D: -1, MP:  2, MM:  0, TT:  1 }, // Showman
+      right: { board:  1, fans: -1, squad:  0, TF: -1, D:  1, MP: -1, MM:  0, TT: -1 }, // Politician
+    }
   },
   {
     id: "sc_029",
@@ -429,7 +567,11 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "locker",
     triggerCondition: "any_time",
     gameCategory: "locker",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board:  0, fans:  1, squad:  2, TF:  0, D:  0, MP:  0, MM:  2, TT: -1 }, // Father Figure
+      right: { board:  0, fans:  1, squad:  0, TF:  1, D:  0, MP:  1, MM:  0, TT:  0 }, // Showman
+    }
   },
   {
     id: "sc_030",
@@ -443,6 +585,10 @@ export const SCENARIO_CARDS: ScenarioCardData[] = [
     imageCategory: "stadium",
     triggerCondition: "any_time",
     gameCategory: "stadium",
-    isBreaking: false
+    isBreaking: false,
+    psych: {
+      left:  { board: -1, fans: -1, squad:  0, TF: -1, D:  1, MP:  0, MM:  1, TT: -1 }, // Politician
+      right: { board:  0, fans:  0, squad: -1, TF:  1, D: -1, MP: -1, MM:  0, TT:  2 }, // Maverick
+    }
   }
 ];
