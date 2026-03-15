@@ -7,6 +7,7 @@
  */
 
 import type { PsychDelta } from './game-scenarios';
+export type { PsychDelta };
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

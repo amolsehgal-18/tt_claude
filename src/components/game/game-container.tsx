@@ -8,13 +8,11 @@ import { MatchRadar } from './match-radar';
 import { TensionArcs } from './tension-arcs';
 import { SwipeCard } from './swipe-card';
 import { SeasonSummary } from './season-summary';
-import { getAiScenarioPresentation } from '@/ai/flows/ai-scenario-presentation-flow';
-import type { AiScenarioPresentationOutput } from '@/ai/flows/ai-scenario-presentation-flow';
-import { SCENARIO_CARDS } from '@/lib/game-scenarios';
+import { getLocalScenario } from '@/lib/scenario-engine';
+import type { LocalScenario } from '@/lib/scenario-engine';
 import {
   createInitialProfile,
   applySwipe,
-  inferDeltaFromImpact,
   deriveArchetype,
   profileToFirestore,
 } from '@/lib/psychProfile';
@@ -27,7 +25,7 @@ import { doc } from 'firebase/firestore';
 
 export const GameContainer = ({ initialState }: { initialState?: GameState }) => {
   const [state, setState]                   = useState<GameState | null>(initialState || null);
-  const [currentScenario, setCurrentScenario] = useState<AiScenarioPresentationOutput | null>(null);
+  const [currentScenario, setCurrentScenario] = useState<LocalScenario | null>(null);
   const [loading, setLoading]               = useState(false);
   const [isSimulating, setIsSimulating]     = useState(false);
   const [matchIntro, setMatchIntro]         = useState(false);
@@ -86,11 +84,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     }
 
     // ── Update psychProfile ──────────────────────────────────────────────
-    // Look up explicit psych from SCENARIO_CARDS first; fall back to inference
-    const baseScenario = SCENARIO_CARDS.find(sc => sc.id === currentScenario.scenarioId);
-    const psychDelta = baseScenario?.psych
-      ? baseScenario.psych[side]
-      : inferDeltaFromImpact(impact);
+    // Every local scenario now has explicit psych tags — look up directly
+    const psychDelta = currentScenario.psych[side];
 
     const updatedProfile = applySwipe(psychProfile, psychDelta);
     setPsychProfile(updatedProfile);
@@ -128,33 +123,23 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     return () => clearInterval(interval);
   }, [currentScenario, isSimulating, matchIntro, loading, error, state?.isSacked, state?.isSeasonEnd, handleDecision]);
 
-  // ── Fetch next scenario from AI ───────────────────────────────────────────
-  const fetchScenario = useCallback(async () => {
+  // ── Fetch next scenario from local DB (instant — no AI call) ─────────────
+  const fetchScenario = useCallback(() => {
     if (!state || state.isSacked || state.isSeasonEnd || isFetchingRef.current || isSimulating || matchIntro) return;
     isFetchingRef.current = true;
-    setLoading(true);
-    setError(null);
-    try {
-      const uniqueSeed = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-      const result = await getAiScenarioPresentation({
-        boardSupport:           state.boardSupport,
-        fanSupport:             state.fanSupport,
-        dressingRoom:           state.dressingRoom,
-        aggression:             state.aggression,
-        userTeam:               state.userTeam,
-        currentLeaguePosition:  state.currentLeaguePosition,
-        sagaObjective:          CAREER_MODES[state.mode].name,
-        objectiveMet:           state.currentLeaguePosition <= activeConfig!.target,
-        excludedScenarioIds:    state.history.slice(-20),
-        randomSeed:             uniqueSeed,
-      });
-      setCurrentScenario(result);
-    } catch {
-      setError("Intel transmission interrupted.");
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-    }
+    const result = getLocalScenario({
+      boardSupport:           state.boardSupport,
+      fanSupport:             state.fanSupport,
+      dressingRoom:           state.dressingRoom,
+      aggression:             state.aggression,
+      userTeam:               state.userTeam,
+      currentLeaguePosition:  state.currentLeaguePosition,
+      sagaObjective:          CAREER_MODES[state.mode].name,
+      objectiveMet:           state.currentLeaguePosition <= activeConfig!.target,
+      excludedScenarioIds:    state.history.slice(-20),
+    });
+    setCurrentScenario(result);
+    isFetchingRef.current = false;
   }, [state, activeConfig, isSimulating, matchIntro]);
 
   useEffect(() => {
