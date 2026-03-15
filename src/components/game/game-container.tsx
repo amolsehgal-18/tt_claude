@@ -521,11 +521,9 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       </div>
 
       {/* ── Tension triangle + Manager portrait ── */}
-      <div className="flex items-center px-3 pb-0 gap-3 z-10">
+      <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10">
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
-        <div className="ml-auto flex-shrink-0">
-          <ManagerMoodView mood={mood} />
-        </div>
+        <ManagerMoodView mood={mood} />
       </div>
 
       {/* Thin amber divider */}

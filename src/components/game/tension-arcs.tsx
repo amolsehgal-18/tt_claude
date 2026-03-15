@@ -80,7 +80,7 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
     const startTime = performance.now();
     const pframe = (now: number) => {
       const t = Math.min((now - startTime) / 500, 1);
-      el.setAttribute('r',       String(3.5 + t * 10));
+      el.setAttribute('r',       String(1.75 + t * 10));
       el.setAttribute('opacity', String(0.9 * (1 - t)));
       if (t < 1) requestAnimationFrame(pframe);
       else        el.setAttribute('opacity', '0');
@@ -153,14 +153,14 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
         />
 
         {/* ── Vertex dots ── */}
-        <circle ref={dotBoardRef} cx={init.board.x} cy={init.board.y} r="3.5" fill="#1E6B3C"/>
-        <circle ref={dotFansRef}  cx={init.fans.x}  cy={init.fans.y}  r="3.5" fill="#D81159"/>
-        <circle ref={dotSquadRef} cx={init.squad.x} cy={init.squad.y} r="3.5" fill="#73D2DE"/>
+        <circle ref={dotBoardRef} cx={init.board.x} cy={init.board.y} r="1.75" fill="#1E6B3C"/>
+        <circle ref={dotFansRef}  cx={init.fans.x}  cy={init.fans.y}  r="1.75" fill="#D81159"/>
+        <circle ref={dotSquadRef} cx={init.squad.x} cy={init.squad.y} r="1.75" fill="#73D2DE"/>
 
         {/* ── Pulse rings (expand + fade on stat change) ── */}
-        <circle ref={pulseBoardRef} cx={init.board.x} cy={init.board.y} r="3.5" fill="none" stroke="#1E6B3C" strokeWidth="1.5" opacity="0"/>
-        <circle ref={pulseFansRef}  cx={init.fans.x}  cy={init.fans.y}  r="3.5" fill="none" stroke="#D81159" strokeWidth="1.5" opacity="0"/>
-        <circle ref={pulseSquadRef} cx={init.squad.x} cy={init.squad.y} r="3.5" fill="none" stroke="#73D2DE" strokeWidth="1.5" opacity="0"/>
+        <circle ref={pulseBoardRef} cx={init.board.x} cy={init.board.y} r="1.75" fill="none" stroke="#1E6B3C" strokeWidth="1" opacity="0"/>
+        <circle ref={pulseFansRef}  cx={init.fans.x}  cy={init.fans.y}  r="1.75" fill="none" stroke="#D81159" strokeWidth="1" opacity="0"/>
+        <circle ref={pulseSquadRef} cx={init.squad.x} cy={init.squad.y} r="1.75" fill="none" stroke="#73D2DE" strokeWidth="1" opacity="0"/>
       </svg>
     </div>
   );
