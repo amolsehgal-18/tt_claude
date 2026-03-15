@@ -369,7 +369,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
       {/* Tension arcs */}
       <div className="px-4 py-2 flex justify-around items-center bg-transparent z-10 border-b border-white/5 relative -mb-4">
-        <div className="flex-1 flex justify-center scale-95 opacity-80"><TensionArcs board={state.boardSupport} fans={state.fanSupport} /></div>
+        <div className="flex-1 flex justify-center scale-95 opacity-80"><TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} /></div>
         <div className="flex-1 flex justify-center scale-95 opacity-80"><ManagerMoodView mood={mood} /></div>
       </div>
 
