@@ -56,8 +56,18 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete }: Match
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width || 300;
+    const height = rect.height || 225;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+
+    // Pitch margins
+    const mx = 6, my = 6;
+    const pw = width - mx * 2;
+    const ph = height - my * 2;
 
     // Tactical 4-4-2 Formations
     const userFormation = [
@@ -71,11 +81,11 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete }: Match
 
     const players: Player[] = [
       ...userFormation.map(pos => ({
-        x: pos[0] * width, y: pos[1] * height, vx: 0, vy: 0, team: 'user' as const, color: '#3b82f6', 
+        x: pos[0] * width, y: pos[1] * height, vx: 0, vy: 0, team: 'user' as const, color: '#3b82f6',
         baseX: pos[0] * width, baseY: pos[1] * height
       })),
       ...oppFormation.map(pos => ({
-        x: pos[0] * width, y: pos[1] * height, vx: 0, vy: 0, team: 'opp' as const, color: '#ef4444', 
+        x: pos[0] * width, y: pos[1] * height, vx: 0, vy: 0, team: 'opp' as const, color: '#ef4444',
         baseX: pos[0] * width, baseY: pos[1] * height
       }))
     ];
@@ -88,58 +98,158 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete }: Match
 
     let animationFrame: number;
 
-    const animate = () => {
-      ctx.clearRect(0, 0, width, height);
-      
-      // Pitch Grid
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    // ── Static pitch markings ─────────────────────────────────────
+    const drawPitch = () => {
+      // Green background
+      ctx.fillStyle = '#1a4a1a';
+      ctx.fillRect(0, 0, width, height);
+
+      // Alternating grass stripes
+      const numStripes = 8;
+      const sw = pw / numStripes;
+      for (let i = 0; i < numStripes; i++) {
+        if (i % 2 === 0) {
+          ctx.fillStyle = 'rgba(0,0,0,0.07)';
+          ctx.fillRect(mx + i * sw, my, sw, ph);
+        }
+      }
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(5, 5, width - 10, height - 10);
+
+      // Outer boundary
+      ctx.strokeRect(mx, my, pw, ph);
+
+      // Halfway line
       ctx.beginPath();
-      ctx.moveTo(width/2, 5);
-      ctx.lineTo(width/2, height - 5);
+      ctx.moveTo(mx + pw / 2, my);
+      ctx.lineTo(mx + pw / 2, my + ph);
       ctx.stroke();
 
-      // Ball Physics - High-Speed Target-Based Passing
+      // Center circle (~9.15m radius / 52.5m half → ~12% of ph)
+      const cr = Math.round(ph * 0.12);
+      ctx.beginPath();
+      ctx.arc(mx + pw / 2, my + ph / 2, cr, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Center spot
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.beginPath();
+      ctx.arc(mx + pw / 2, my + ph / 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Penalty areas (16.5m / 105m deep, 40.3m / 68m wide)
+      const paD = Math.round(pw * 0.157);
+      const paH = Math.round(ph * 0.593);
+      const paY = my + (ph - paH) / 2;
+      ctx.strokeRect(mx, paY, paD, paH);
+      ctx.strokeRect(mx + pw - paD, paY, paD, paH);
+
+      // Goal areas (5.5m / 105m deep, 18.3m / 68m wide)
+      const gaD = Math.round(pw * 0.052);
+      const gaH = Math.round(ph * 0.269);
+      const gaY = my + (ph - gaH) / 2;
+      ctx.strokeRect(mx, gaY, gaD, gaH);
+      ctx.strokeRect(mx + pw - gaD, gaY, gaD, gaH);
+
+      // Penalty spots (11m / 105m from goal line)
+      const ps = Math.round(pw * 0.105);
+      ctx.fillStyle = 'rgba(255,255,255,0.65)';
+      ctx.beginPath();
+      ctx.arc(mx + ps, my + ph / 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(mx + pw - ps, my + ph / 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Corner arcs (1m radius, ~5px for visibility)
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.arc(mx, my, 5, 0, Math.PI / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(mx + pw, my, 5, Math.PI / 2, Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(mx, my + ph, 5, Math.PI * 1.5, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(mx + pw, my + ph, 5, Math.PI, Math.PI * 1.5);
+      ctx.stroke();
+
+      // Goal posts (7.3m / 68m wide → ~10.7% of ph)
+      const gW = Math.round(ph * 0.107);
+      const gY = my + (ph - gW) / 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.fillRect(0, gY, mx, gW);           // Left goal
+      ctx.fillRect(mx + pw, gY, mx, gW);     // Right goal
+    };
+
+    const animate = () => {
+      drawPitch();
+
+      // ── Ball Physics ─────────────────────────────────────────────
       const target = players[ball.targetPlayerIndex];
       const dx = target.x - ball.x;
       const dy = target.y - ball.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist < 8) {
+      if (dist < 6) {
         const teammates = players.filter((_, idx) => idx !== ball.targetPlayerIndex);
         ball.targetPlayerIndex = players.indexOf(teammates[Math.floor(Math.random() * teammates.length)]);
       } else {
-        const speed = 15; 
+        const speed = Math.min(4, dist * 0.12);
         ball.x += (dx / dist) * speed;
         ball.y += (dy / dist) * speed;
       }
 
-      // Player Movement - Drifting
-      players.forEach((p) => {
+      // ── Player Movement ──────────────────────────────────────────
+      players.forEach((p, idx) => {
+        const distToBall = Math.sqrt((ball.x - p.x) ** 2 + (ball.y - p.y) ** 2);
+        const isTarget = idx === ball.targetPlayerIndex;
+
+        // Activity scales up when ball is nearby
+        const activity = Math.max(0.35, 1.6 - distToBall / (width * 0.28));
+
+        // Spring back to base position + random organic drift
         const dtx = p.baseX - p.x;
         const dty = p.baseY - p.y;
-        p.x += dtx * 0.05 + (Math.random() - 0.5) * 1.5;
-        p.y += dty * 0.05 + (Math.random() - 0.5) * 1.5;
+        p.x += dtx * 0.025 + (Math.random() - 0.5) * 1.1 * activity;
+        p.y += dty * 0.025 + (Math.random() - 0.5) * 1.1 * activity;
 
+        // Ball target makes a slight run toward the ball
+        if (isTarget) {
+          p.x += (ball.x - p.x) * 0.025;
+          p.y += (ball.y - p.y) * 0.025;
+        }
+
+        // Clamp within pitch
+        p.x = Math.max(mx + 4, Math.min(mx + pw - 4, p.x));
+        p.y = Math.max(my + 4, Math.min(my + ph - 4, p.y));
+
+        // Draw player
         ctx.fillStyle = p.color;
+        ctx.shadowBlur = isTarget ? 10 : 0;
+        ctx.shadowColor = p.color;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, isTarget ? 7 : 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)';
         ctx.lineWidth = 1;
         ctx.stroke();
       });
 
-      // Render High-Visibility Yellow Ball
-      ctx.fillStyle = '#facc15'; 
-      ctx.shadowBlur = 15;
+      // ── Ball ─────────────────────────────────────────────────────
+      ctx.fillStyle = '#facc15';
+      ctx.shadowBlur = 12;
       ctx.shadowColor = '#facc15';
       ctx.beginPath();
-      ctx.arc(ball.x, ball.y, 5, 0, Math.PI * 2);
+      ctx.arc(ball.x, ball.y, 4.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = '#000';
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 1;
       ctx.stroke();
 
       animationFrame = requestAnimationFrame(animate);
@@ -205,16 +315,16 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete }: Match
 
   return (
     <div className="flex flex-col items-center gap-4 w-full h-full justify-center px-4">
-      <div className="relative premium-glass p-0.5 slanted-container w-full max-w-[300px] aspect-[4/3] border-white/10 overflow-hidden bg-black/40 shadow-inner">
-        <canvas ref={canvasRef} width={300} height={225} className="w-full h-full rounded" />
+      <div className="relative premium-glass p-0.5 slanted-container w-full max-w-[300px] aspect-[4/3] border-white/10 overflow-hidden shadow-inner">
+        <canvas ref={canvasRef} width={300} height={225} className="w-full h-full" />
         <div className="absolute top-2 right-2">
-           <div className="text-[9px] font-headline text-accent/80 uppercase font-black tracking-widest italic animate-pulse">
+          <div className="text-[9px] font-headline text-accent/80 uppercase font-black tracking-widest italic animate-pulse">
             LIVE SIMULATION
           </div>
         </div>
       </div>
-      <div className="w-full max-w-[300px] text-center min-h-[32px] flex items-center justify-center">
-        <span className="text-[11px] font-headline font-black uppercase tracking-tight text-white/90 italic leading-tight">
+      <div className="w-full max-w-[300px] text-center min-h-[40px] flex items-center justify-center px-2">
+        <span className="text-[17px] font-headline font-black uppercase tracking-tight text-white italic leading-tight">
           {commentary}
         </span>
       </div>
