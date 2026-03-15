@@ -447,7 +447,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         }}
       >
         <div
-          className="absolute left-0 top-0 bottom-0 z-20 flex items-center px-3 font-headline font-black text-[11px] uppercase text-black whitespace-nowrap"
+          className="absolute left-0 top-0 bottom-0 z-20 flex items-center px-3 font-grotesk font-bold text-[11px] uppercase text-black whitespace-nowrap"
           style={{ letterSpacing: '2.5px', background: '#FBB13C' }}
         >
           BREAKING
@@ -459,8 +459,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         <div className="animate-ticker flex items-center">
           {[...newsItems, ...newsItems].map((item, idx) => (
             <React.Fragment key={idx}>
-              <span className="font-headline font-black text-black" style={{ fontSize: '14px', letterSpacing: '0.3px' }}>{item}</span>
-              <span className="inline-block mx-5 flex-shrink-0 font-black text-black" style={{ fontSize: '16px', opacity: 0.35 }}>◆</span>
+              <span className="font-grotesk font-bold text-black" style={{ fontSize: '13px', letterSpacing: '0.2px' }}>{item}</span>
+              <span className="inline-block mx-5 flex-shrink-0 font-bold text-black" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '16px', opacity: 0.35 }}>◆</span>
             </React.Fragment>
           ))}
         </div>

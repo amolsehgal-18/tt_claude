@@ -3,31 +3,31 @@
     {
       "id": "manager-happy",
       "description": "A successful football manager celebrating a victory",
-      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/happy.png",
+      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/man_happy.png",
       "imageHint": "happy manager"
     },
     {
       "id": "manager-neutral",
       "description": "A composed manager observing the match",
-      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/neutral.png",
+      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/man_neutral.png",
       "imageHint": "neutral manager"
     },
     {
       "id": "manager-stressed",
       "description": "A stressed manager feeling the pressure",
-      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/stressed.png",
+      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/man_stressed.png",
       "imageHint": "stressed manager"
     },
     {
       "id": "manager-angry",
       "description": "An angry manager shouting instructions",
-      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/angry.png",
+      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/man_angry.png",
       "imageHint": "angry manager"
     },
     {
       "id": "manager-sacked",
       "description": "A manager leaving after being dismissed",
-      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/sacked.png",
+      "imageUrl": "https://raw.githubusercontent.com/amolsehgal-18/antigravity-touchline_tantrum/main/touchline_tantrum/assets/images/manager/man_sacked.png",
       "imageHint": "sacked manager"
     }
   ]
