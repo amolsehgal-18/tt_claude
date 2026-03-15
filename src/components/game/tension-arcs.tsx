@@ -8,9 +8,8 @@ interface TensionArcsProps {
   dressing: number; // 0–1  (squad)
 }
 
-// Radar geometry (matches tt_final_ui_v4.html reference)
-// Centre: (60, 54) — Board top, Fans bottom-right, Squad bottom-left
-const CX = 60, CY = 54;
+// Radar geometry — Centre: (60, 60) — Board top, Fans bottom-right, Squad bottom-left
+const CX = 60, CY = 60;
 const DIRS = {
   board: { dx: 0,   dy: -46 },   // top    → green
   fans:  { dx: 44,  dy:  34 },   // right  → pink
@@ -127,16 +126,21 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
   const initPoly = `${init.board.x},${init.board.y} ${init.fans.x},${init.fans.y} ${init.squad.x},${init.squad.y}`;
 
   return (
-    <div style={{ flexShrink: 0, width: 120, height: 108 }}>
-      <svg viewBox="0 0 120 108" width={120} height={108} fill="none">
+    <div style={{ flexShrink: 0, width: 120, height: 120 }}>
+      <svg viewBox="0 0 120 120" width={120} height={120} fill="none" overflow="visible">
 
         {/* ── Grid ── */}
-        <polygon points="60,8 104,88 16,88"  fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
-        <polygon points="60,26 89,74 31,74"  fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
-        <polygon points="60,44 74,60 46,60"  fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.8"/>
-        <line x1="60" y1="8"  x2="60"  y2="88" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
-        <line x1="60" y1="8"  x2="16"  y2="88" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
-        <line x1="60" y1="8"  x2="104" y2="88" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
+        <polygon points="60,14 104,94 16,94"  fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
+        <polygon points="60,30 89,78 31,78"  fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
+        <polygon points="60,48 74,64 46,64"  fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="0.8"/>
+        <line x1="60" y1="14" x2="60"  y2="94" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
+        <line x1="60" y1="14" x2="16"  y2="94" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
+        <line x1="60" y1="14" x2="104" y2="94" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
+
+        {/* ── Axis labels ── */}
+        <text x="60"  y="8"   textAnchor="middle" fontSize="7" fill="#1E6B3C"  fontFamily="monospace" letterSpacing="0.8" opacity="0.9">BOARD</text>
+        <text x="113" y="100" textAnchor="middle" fontSize="7" fill="#D81159"  fontFamily="monospace" letterSpacing="0.8" opacity="0.9">FANS</text>
+        <text x="7"   y="100" textAnchor="middle" fontSize="7" fill="#73D2DE"  fontFamily="monospace" letterSpacing="0.8" opacity="0.9">SQUAD</text>
 
         {/* ── Data shape (spring-animated) ── */}
         <polygon
