@@ -1,9 +1,6 @@
 "use client"
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { cn } from '@/lib/utils';
-import { Shield, Target } from 'lucide-react';
-import { SlantedButton } from './slanted-elements';
 
 interface MatchRadarProps {
   userTeam: string;
@@ -11,6 +8,9 @@ interface MatchRadarProps {
   result: 'win' | 'draw' | 'loss' | null;
   onComplete: () => void;
   hotTake?: string | null;
+  nextOpponent?: string;
+  nextGW?: number;
+  winChance?: number;
 }
 
 interface Player {
@@ -24,7 +24,7 @@ interface Player {
   baseY: number;
 }
 
-export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake }: MatchRadarProps) => {
+export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake, nextOpponent, nextGW, winChance }: MatchRadarProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showFinal, setShowFinal] = useState(false);
   const [commentary, setCommentary] = useState("0' Kick-off! The tactical battle begins.");
@@ -282,40 +282,92 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake
   }, [showFinal, matchEvents]);
 
   if (showFinal) {
+    const resultColor  = result === 'win' ? '#1E6B3C' : result === 'draw' ? '#FBB13C' : '#D81159';
+    const resultBg     = result === 'win' ? 'rgba(30,107,60,0.12)'   : result === 'draw' ? 'rgba(251,177,60,0.10)'  : 'rgba(216,17,89,0.10)';
+    const resultBorder = result === 'win' ? 'rgba(30,107,60,0.30)'   : result === 'draw' ? 'rgba(251,177,60,0.25)'  : 'rgba(216,17,89,0.25)';
+    const resultLabel  = result === 'win' ? '⚽ Full Time · Win'     : result === 'draw' ? '🤝 Full Time · Draw'    : '❌ Full Time · Loss';
+    const venue        = Math.random() > 0.5 ? 'Home' : 'Away';
+
     return (
-      <div className="relative premium-glass p-5 slanted-container w-full max-w-[280px] border-white/10 shadow-2xl bg-black/95 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-        <div className="flex items-center justify-between w-full gap-2 mb-6">
-          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-            <Shield className="w-6 h-6 text-primary" />
-            <div className="text-[11px] font-headline font-black uppercase text-center truncate w-full tracking-tight text-white">{userTeam}</div>
+      <div className="w-full px-3 flex flex-col gap-3 py-2 overflow-y-auto animate-in fade-in zoom-in-95 duration-300">
+
+        {/* ── Result card ── */}
+        <div className="rounded-[18px] p-4 text-center relative overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          {/* Result badge */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-[3px] rounded-full font-code text-[8px] tracking-[3px] uppercase mb-3"
+            style={{ background: resultBg, border: `1px solid ${resultBorder}`, color: resultColor }}>
+            {resultLabel}
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-3xl font-headline font-black italic tracking-tighter flex items-center gap-2 mb-1">
-              <span className={cn(result === 'win' ? "text-accent" : "text-white")}>{score.user}</span>
-              <span className="text-white/20">-</span>
-              <span className={cn(result === 'loss' ? "text-destructive" : "text-white")}>{score.opp}</span>
+          {/* Score */}
+          <div className="flex items-center justify-center gap-2.5">
+            <div className="text-center">
+              <div className="text-[10px] font-headline font-black uppercase tracking-wide mb-1 text-white/40">{userTeam}</div>
+              <div className="font-headline font-black leading-none text-white" style={{ fontSize: '50px', letterSpacing: '-2px' }}>{score.user}</div>
             </div>
-            <div className={cn(
-              "text-[8px] font-headline font-black uppercase px-2.5 py-0.5 tracking-widest rounded-full",
-              result === 'win' ? "bg-green-600/80 text-white" : result === 'draw' ? "bg-white/10 text-white/60" : "bg-red-600/80 text-white"
-            )}>
-              {result === 'win' ? "WON" : result === 'draw' ? "DRAW" : "LOST"}
+            <div className="font-light self-end pb-1 text-white/25" style={{ fontSize: '24px' }}>—</div>
+            <div className="text-center">
+              <div className="text-[10px] font-headline font-black uppercase tracking-wide mb-1 text-white/40">{opponentTeam}</div>
+              <div className="font-headline font-black leading-none text-white" style={{ fontSize: '50px', letterSpacing: '-2px' }}>{score.opp}</div>
             </div>
           </div>
-          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-            <Target className="w-6 h-6 text-destructive" />
-            <div className="text-[11px] font-headline font-black uppercase text-center truncate w-full tracking-tight text-white">{opponentTeam}</div>
-          </div>
+          {hotTake && (
+            <p className="text-[11px] italic mt-3 leading-snug animate-in fade-in duration-500"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.40)' }}>
+              &ldquo;{hotTake}&rdquo;
+            </p>
+          )}
         </div>
-        {hotTake && (
-          <p className="text-[11px] italic text-center leading-snug mb-2 animate-in fade-in duration-500"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.45)' }}>
-            &ldquo;{hotTake}&rdquo;
-          </p>
+
+        {/* ── Next fixture card ── */}
+        {nextOpponent && (
+          <div className="rounded-[14px] p-3 flex items-center gap-3 relative overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            {/* Amber left accent bar */}
+            <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-[14px]" style={{ background: '#FBB13C' }} />
+            {/* Label col */}
+            <div className="flex-shrink-0 pl-2">
+              <div className="font-code text-[7px] uppercase tracking-[3px] mb-0.5" style={{ color: '#FBB13C' }}>Up Next</div>
+              <div className="font-code text-[10px] font-bold text-white" style={{ letterSpacing: '1px' }}>GW {nextGW}</div>
+            </div>
+            {/* Divider */}
+            <div className="w-px h-9 flex-shrink-0" style={{ background: 'rgba(255,255,255,0.07)' }} />
+            {/* Opponent logo placeholder */}
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-[18px] flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))', border: '1px solid rgba(255,255,255,0.10)' }}>
+              🏟️
+            </div>
+            {/* Opponent info */}
+            <div className="flex-1 min-w-0">
+              <div className="font-code text-[8px] uppercase tracking-[2px] mb-0.5" style={{ color: '#4E5A6E' }}>vs</div>
+              <div className="text-[16px] font-headline font-black uppercase text-white leading-none truncate">{nextOpponent}</div>
+              <div className="font-code text-[7px] uppercase tracking-wide mt-0.5" style={{ color: '#4E5A6E' }}>{venue}</div>
+            </div>
+            {/* Win % */}
+            {winChance !== undefined && (
+              <div className="flex-shrink-0 text-center">
+                <div className="text-[20px] font-headline font-black leading-none"
+                  style={{ color: winChance >= 55 ? '#1E6B3C' : winChance >= 40 ? '#FBB13C' : '#D81159' }}>
+                  {winChance}%
+                </div>
+                <div className="font-code text-[7px] uppercase tracking-wider mt-0.5" style={{ color: '#4E5A6E' }}>Win</div>
+              </div>
+            )}
+          </div>
         )}
-        <SlantedButton onClick={onComplete} className="w-full py-2.5 text-[9px] font-black tracking-[0.2em] bg-white text-black uppercase">
-          PROCEED TO NEXT MATCH
-        </SlantedButton>
+
+        {/* ── Proceed button ── */}
+        <button
+          onClick={onComplete}
+          className="w-full py-3.5 rounded-[14px] text-center font-headline font-black text-[13px] uppercase tracking-[3px]"
+          style={{
+            background: 'linear-gradient(135deg,rgba(251,177,60,0.14),rgba(251,177,60,0.04))',
+            border: '1px solid rgba(251,177,60,0.28)',
+            color: '#FBB13C',
+          }}
+        >
+          → Proceed to GW {nextGW ?? ''}
+        </button>
       </div>
     );
   }

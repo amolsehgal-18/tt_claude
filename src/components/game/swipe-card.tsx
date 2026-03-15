@@ -148,6 +148,34 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
               {scenario.scenario}
             </p>
 
+            {/* ── Impact chips — right-swipe preview (Board / Fans / Squad only) ── */}
+            <div className="flex gap-1.5 flex-wrap mt-2 mb-1">
+              {scenario.impactRight.board !== 0 && (
+                <span className="text-[10px] font-headline font-bold px-1.5 py-[1px] rounded-full border"
+                  style={scenario.impactRight.board > 0
+                    ? { background: 'rgba(30,107,60,0.10)',  borderColor: 'rgba(30,107,60,0.25)',  color: '#1E6B3C' }
+                    : { background: 'rgba(216,17,89,0.10)',  borderColor: 'rgba(216,17,89,0.25)',  color: '#D81159' }}>
+                  {scenario.impactRight.board > 0 ? '+' : '−'}Board
+                </span>
+              )}
+              {scenario.impactRight.fans !== 0 && (
+                <span className="text-[10px] font-headline font-bold px-1.5 py-[1px] rounded-full border"
+                  style={scenario.impactRight.fans > 0
+                    ? { background: 'rgba(30,107,60,0.10)',  borderColor: 'rgba(30,107,60,0.25)',  color: '#1E6B3C' }
+                    : { background: 'rgba(216,17,89,0.10)',  borderColor: 'rgba(216,17,89,0.25)',  color: '#D81159' }}>
+                  {scenario.impactRight.fans > 0 ? '+' : '−'}Fans
+                </span>
+              )}
+              {scenario.impactRight.squad !== 0 && (
+                <span className="text-[10px] font-headline font-bold px-1.5 py-[1px] rounded-full border"
+                  style={scenario.impactRight.squad > 0
+                    ? { background: 'rgba(30,107,60,0.10)',  borderColor: 'rgba(30,107,60,0.25)',  color: '#1E6B3C' }
+                    : { background: 'rgba(216,17,89,0.10)',  borderColor: 'rgba(216,17,89,0.25)',  color: '#D81159' }}>
+                  {scenario.impactRight.squad > 0 ? '+' : '−'}Squad
+                </span>
+              )}
+            </div>
+
             {/* Option cards — amber glow on active swipe, dim idle */}
             <div className="grid grid-cols-2 gap-2 mt-4">
               {/* Left option */}
