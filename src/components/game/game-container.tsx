@@ -45,6 +45,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [swipeInsight, setSwipeInsight]         = useState<string | null>(null);
   const [showPressConference, setShowPressConference] = useState(false);
   const [pressQuestion, setPressQuestion]       = useState('');
+  const [nextOpponentName, setNextOpponentName] = useState<string>('');
 
   // ── Setup wizard ──────────────────────────────────────────────────────────
   const [setupStep, setSetupStep]       = useState(0);
@@ -164,6 +165,9 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       const possibleOpponents = table.filter(t => !t.isUser);
       const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
       setOpponentName(opp);
+      // Pre-pick next fixture opponent for the result card
+      const otherOpps = possibleOpponents.filter(t => t.team !== opp);
+      setNextOpponentName(otherOpps.length ? otherOpps[Math.floor(Math.random() * otherOpps.length)].team : opp);
       const matchResult = calculateMatchResult(newState);
       setPendingResult(matchResult);
       setMatchHotTake(null);
@@ -220,6 +224,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       const possibleOpponents = table.filter(t => !t.isUser);
       const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
       setOpponentName(opp);
+      const otherOpps2 = possibleOpponents.filter(t => t.team !== opp);
+      setNextOpponentName(otherOpps2.length ? otherOpps2[Math.floor(Math.random() * otherOpps2.length)].team : opp);
       const matchResult = calculateMatchResult(newState);
       setPendingResult(matchResult);
       setMatchHotTake(null);
@@ -290,6 +296,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     if (!state || !activeConfig || !pendingResult) return;
     setIsSimulating(false);
     setMatchHotTake(null);
+    setNextOpponentName('');
     const result = pendingResult;
     setPendingResult(null);
 
@@ -451,6 +458,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   const mood      = calculateMood(state);
   const currentGW = activeConfig ? activeConfig.startGW + state.matchesPlayed : 0;
+  const winChance = Math.round((0.30 + state.boardSupport * 0.20 + state.dressingRoom * 0.20) * 100);
 
   return (
     <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto relative overflow-hidden bg-background shadow-2xl border-x border-white/5">
@@ -474,9 +482,12 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           <div className="text-[17px] font-headline font-black uppercase leading-none text-white truncate">
             {state.userTeam}
           </div>
+          <div className="font-code text-[7px] text-white mt-0.5" style={{ letterSpacing: '1px' }}>
+            W{state.wins} D{state.draws} L{state.losses}
+          </div>
         </div>
         <div className="py-1.5 pl-3 pr-5 text-center flex-shrink-0">
-          <div className="font-code text-[7px] uppercase tracking-[2px] opacity-50">GW</div>
+          <div className="font-code text-[7px] uppercase tracking-[2px] text-white">Game Week</div>
           <div className="text-[24px] font-headline font-black leading-none" style={{ color: '#FBB13C', letterSpacing: '-1px' }}>
             {currentGW}
           </div>
@@ -491,20 +502,20 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             Live Standings
           </div>
         </div>
-        <div className="grid px-3 text-[7px] font-code uppercase tracking-[2px] border-b text-white" style={{ gridTemplateColumns: '22px 1fr 28px 34px', borderColor: 'rgba(255,255,255,0.07)' }}>
-          <span>#</span><span>Club</span><span className="text-center">G</span><span className="text-right">Pts</span>
+        <div className="grid px-3 text-[7px] font-code uppercase tracking-[2px] border-b" style={{ gridTemplateColumns: '22px 1fr 28px 34px', borderColor: 'rgba(255,255,255,0.07)', color: '#4E5A6E' }}>
+          <span/><span/><span className="text-center text-white">G</span><span className="text-right text-white">Pts</span>
         </div>
         {windowedLeagueTable.map((team) => (
           <div key={team.team} className="grid items-center px-3 py-[4px] relative" style={{
             gridTemplateColumns: '22px 1fr 28px 34px',
-            borderTop: team.isUser ? '1px solid rgba(59,130,246,0.15)' : '1px solid rgba(255,255,255,0.04)',
-            background: team.isUser ? 'linear-gradient(90deg,rgba(59,130,246,0.10) 0%,rgba(59,130,246,0.03) 80%,transparent 100%)' : 'transparent',
+            borderTop: team.isUser ? '1px solid rgba(115,210,222,0.15)' : '1px solid rgba(255,255,255,0.04)',
+            background: team.isUser ? 'linear-gradient(90deg,rgba(115,210,222,0.08) 0%,rgba(115,210,222,0.02) 80%,transparent 100%)' : 'transparent',
           }}>
-            {team.isUser && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r" style={{ background: '#3b82f6' }} />}
-            <div className="text-[11px] font-headline font-black text-center" style={{ color: team.isUser ? '#3b82f6' : '#5A6878' }}>{team.pos}</div>
-            <div className="text-[12px] font-headline font-black uppercase truncate" style={{ color: team.isUser ? '#3b82f6' : '#EDF2FF' }}>{team.team}</div>
+            {team.isUser && <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded-r" style={{ background: '#73D2DE' }} />}
+            <div className="text-[11px] font-headline font-black text-center" style={{ color: team.isUser ? '#73D2DE' : '#5A6878' }}>{team.pos}</div>
+            <div className="text-[12px] font-headline font-black uppercase truncate" style={{ color: team.isUser ? '#73D2DE' : '#EDF2FF' }}>{team.team}</div>
             <div className="font-code text-[10px] text-center opacity-50">{team.gp}</div>
-            <div className="text-[14px] font-headline font-black text-right" style={{ color: team.isUser ? '#3b82f6' : '#EDF2FF' }}>{team.pts}</div>
+            <div className="text-[14px] font-headline font-black text-right" style={{ color: team.isUser ? '#73D2DE' : '#EDF2FF' }}>{team.pts}</div>
           </div>
         ))}
       </div>
@@ -538,6 +549,9 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             result={pendingResult}
             onComplete={onMatchComplete}
             hotTake={matchHotTake}
+            nextOpponent={nextOpponentName}
+            nextGW={currentGW + 1}
+            winChance={winChance}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center relative gap-2">
@@ -575,6 +589,41 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         )}
       </div>
 
+      {/* ── Win % bar ── */}
+      {!isSimulating && (
+        <div
+          className="mx-3 mb-1 flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 flex-shrink-0 z-[90]"
+          style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <div className="flex-shrink-0">
+            <div className="font-code text-[7px] uppercase tracking-[2.5px] mb-0.5" style={{ color: '#4E5A6E' }}>Win chance</div>
+            <div
+              className="text-[24px] font-headline font-black leading-none"
+              style={{ color: winChance >= 55 ? '#1E6B3C' : winChance >= 40 ? '#FBB13C' : '#D81159', transition: 'color 0.4s' }}
+            >
+              {winChance}%
+            </div>
+          </div>
+          <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${winChance}%`,
+                transition: 'width 0.5s cubic-bezier(.4,0,.2,1), background 0.4s',
+                background: winChance >= 55
+                  ? 'linear-gradient(90deg,#1E6B3C,rgba(30,107,60,0.5))'
+                  : winChance >= 40
+                  ? 'linear-gradient(90deg,#FBB13C,rgba(251,177,60,0.5))'
+                  : 'linear-gradient(90deg,#D81159,rgba(216,17,89,0.4))',
+              }}
+            />
+          </div>
+          <div className="font-code text-[8px] uppercase tracking-wide text-right flex-shrink-0 leading-snug" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Next<br/>Match
+          </div>
+        </div>
+      )}
+
       {/* ── Breaking news ticker — amber bg, black text ── */}
       <div
         className="overflow-hidden flex-shrink-0 relative z-[100]"
@@ -584,23 +633,23 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           paddingBottom: 'max(9px, env(safe-area-inset-bottom, 0px))',
         }}
       >
+        {/* Badge — absolute, sits on top of scroll area */}
         <div
           className="absolute left-0 top-0 bottom-0 z-20 flex items-center px-3 font-grotesk font-bold text-[11px] uppercase text-black whitespace-nowrap"
-          style={{ letterSpacing: '2.5px', background: '#FBB13C' }}
+          style={{ letterSpacing: '2.5px', background: 'rgba(0,0,0,0.18)', borderRight: '2px solid rgba(0,0,0,0.15)' }}
         >
           BREAKING
         </div>
-        <div
-          className="absolute top-0 bottom-0 z-20 pointer-events-none"
-          style={{ left: '80px', width: '28px', background: 'linear-gradient(to right, #FBB13C, transparent)' }}
-        />
-        <div className="animate-ticker flex items-center">
-          {[...newsItems, ...newsItems].map((item, idx) => (
-            <React.Fragment key={idx}>
-              <span className="font-grotesk font-bold text-black" style={{ fontSize: '13px', letterSpacing: '0.2px' }}>{item}</span>
-              <span className="inline-block mx-5 flex-shrink-0 font-bold text-black" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '16px', opacity: 0.35 }}>◆</span>
-            </React.Fragment>
-          ))}
+        {/* Masked scroll area — starts after badge to prevent overlap */}
+        <div style={{ overflow: 'hidden', marginLeft: '88px' }}>
+          <div className="animate-ticker flex items-center">
+            {[...newsItems, ...newsItems].map((item, idx) => (
+              <React.Fragment key={idx}>
+                <span className="font-grotesk font-bold text-black" style={{ fontSize: '11px', letterSpacing: '0.2px', whiteSpace: 'nowrap' }}>{item}</span>
+                <span className="inline-block mx-4 flex-shrink-0 font-bold text-black/30" style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '14px' }}>◆</span>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
     </div>

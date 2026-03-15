@@ -57,7 +57,6 @@ function MainMenuContent() {
           <h1 className="text-6xl font-headline font-bold uppercase tracking-tighter text-white">
             TOUCHLINE<br/><span className="text-accent italic">TANTRUM</span>
           </h1>
-          <p className="text-white/60 font-medium tracking-wide">THE TENSION TRIANGLE SIMULATOR</p>
         </div>
 
         <div className="flex flex-col gap-4">
