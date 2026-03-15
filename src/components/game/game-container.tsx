@@ -25,6 +25,27 @@ import { Input } from '@/components/ui/input';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
+// ── Sync client-side hot-take fallbacks (result-indexed) ─────────────────────
+// These are set immediately so the result screen always shows a matching quote,
+// even if the API response is slow or comes back stale from a previous match.
+const CLIENT_FALLBACKS: Record<'win' | 'draw' | 'loss', string[]> = {
+  win:  [
+    "Three points. Unconvincing, functional, sufficient.",
+    "Ugly but it counts. Three points on the board.",
+    "Not pretty. The scoreboard disagreed with the performance.",
+  ],
+  draw: [
+    "A point shared. Nobody celebrating, nobody crying.",
+    "Stalemate. Both sides earned their share.",
+    "Honours split. The work continues.",
+  ],
+  loss: [
+    "Outclassed and undone. Back to the drawing board.",
+    "The scoreline told the truth nobody wanted to hear.",
+    "Three points surrendered. The next match arrives too quickly.",
+  ],
+};
+
 export const GameContainer = ({ initialState }: { initialState?: GameState }) => {
   const [state, setState]                   = useState<GameState | null>(initialState || null);
   const [currentScenario, setCurrentScenario] = useState<LocalScenario | null>(null);
@@ -54,7 +75,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [setupName, setSetupName]       = useState("Gaffer");
   const [setupTeam, setSetupTeam]       = useState("United FC");
 
-  const isFetchingRef = useRef(false);
+  const isFetchingRef  = useRef(false);
+  const matchGenRef    = useRef(0);
 
   const { firestore } = useFirestore();
   const { user }      = useUser();
@@ -170,18 +192,22 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       setNextOpponentName(otherOpps.length ? otherOpps[Math.floor(Math.random() * otherOpps.length)].team : opp);
       const matchResult = calculateMatchResult(newState);
       setPendingResult(matchResult);
-      setMatchHotTake(null);
+      // ── Immediately set a result-correct fallback (prevents stale-API bleed) ──
+      matchGenRef.current += 1;
+      const thisGen1 = matchGenRef.current;
+      const pool1 = CLIENT_FALLBACKS[matchResult];
+      setMatchHotTake(pool1[Math.floor(Math.random() * pool1.length)]);
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
 
-      // ── Fire hot take fetch (should resolve before ~5.4s simulation ends) ──
+      // ── Fire hot take fetch — only apply if still the current match ──
       fetch('/api/match-take', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: opp }),
       })
         .then(r => r.json())
-        .then(({ take }: { take: string }) => setMatchHotTake(take))
+        .then(({ take }: { take: string }) => { if (matchGenRef.current === thisGen1) setMatchHotTake(take); })
         .catch(() => {});
     }
   }, [currentScenario, state, psychProfile, savePsychToFirestore]);
@@ -228,16 +254,21 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       setNextOpponentName(otherOpps2.length ? otherOpps2[Math.floor(Math.random() * otherOpps2.length)].team : opp);
       const matchResult = calculateMatchResult(newState);
       setPendingResult(matchResult);
-      setMatchHotTake(null);
+      // ── Immediately set a result-correct fallback (prevents stale-API bleed) ──
+      matchGenRef.current += 1;
+      const thisGen2 = matchGenRef.current;
+      const pool2 = CLIENT_FALLBACKS[matchResult];
+      setMatchHotTake(pool2[Math.floor(Math.random() * pool2.length)]);
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
+      // ── Fire hot take fetch — only apply if still the current match ──
       fetch('/api/match-take', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: opp }),
       })
         .then(r => r.json())
-        .then(({ take }: { take: string }) => setMatchHotTake(take))
+        .then(({ take }: { take: string }) => { if (matchGenRef.current === thisGen2) setMatchHotTake(take); })
         .catch(() => {});
     }
   }, [state, psychProfile, savePsychToFirestore]);
