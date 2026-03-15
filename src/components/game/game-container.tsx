@@ -18,6 +18,8 @@ import {
 } from '@/lib/psychProfile';
 import type { PsychProfile, Archetype } from '@/lib/psychProfile';
 import { AlertTriangle, Zap, ArrowRight } from 'lucide-react';
+import { PressConferenceCard, getRandomPressQuestion } from './press-conference-card';
+import type { PressConferenceResult } from './press-conference-card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -37,6 +39,12 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [psychProfile, setPsychProfile]       = useState<PsychProfile>(createInitialProfile());
   const [seasonArchetype, setSeasonArchetype] = useState<Archetype | null>(null);
   const psychSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── AI feature state ──────────────────────────────────────────────────────
+  const [matchHotTake, setMatchHotTake]         = useState<string | null>(null);
+  const [swipeInsight, setSwipeInsight]         = useState<string | null>(null);
+  const [showPressConference, setShowPressConference] = useState(false);
+  const [pressQuestion, setPressQuestion]       = useState('');
 
   // ── Setup wizard ──────────────────────────────────────────────────────────
   const [setupStep, setSetupStep]       = useState(0);
@@ -69,14 +77,28 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   ];
   const [newsItems, setNewsItems] = useState<string[]>(DEFAULT_NEWS);
 
+  // Fetch contextual news when a game session starts (once per game ID)
   useEffect(() => {
-    fetch('/api/news')
+    if (!state) return;
+    fetch('/api/news', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        boardSupport:  state.boardSupport,
+        fanSupport:    state.fanSupport,
+        dressingRoom:  state.dressingRoom,
+        mode:          state.mode,
+        position:      state.currentLeaguePosition,
+        wins:          state.wins,
+        losses:        state.losses,
+        matchesPlayed: state.matchesPlayed,
+      }),
+    })
       .then(r => r.json())
-      .then(({ items }: { items: string[] }) => {
-        if (items?.length >= 3) setNewsItems(items);
-      })
+      .then(({ items }: { items: string[] }) => { if (items?.length >= 3) setNewsItems(items); })
       .catch(() => {});
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.id]);
 
   const activeConfig = state ? CAREER_MODES[state.mode].durations[state.durationIndex] : null;
 
@@ -121,20 +143,102 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setCurrentScenario(null);
     setTimeLeft(15);
 
+    // ── Fire non-blocking swipe insight ──────────────────────────────────
+    setSwipeInsight(null);
+    const choiceText = side === 'left' ? currentScenario.leftOption : currentScenario.rightOption;
+    fetch('/api/explain', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenarioText: currentScenario.scenario,
+        choiceText,
+        impact: { board: impact.board, fans: impact.fans, squad: impact.squad },
+      }),
+    })
+      .then(r => r.json())
+      .then(({ insight }: { insight: string }) => setSwipeInsight(insight))
+      .catch(() => {});
+
     if (newCardsSeen > 0 && newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
       const possibleOpponents = table.filter(t => !t.isUser);
       const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
       setOpponentName(opp);
-      setPendingResult(calculateMatchResult(newState));
+      const matchResult = calculateMatchResult(newState);
+      setPendingResult(matchResult);
+      setMatchHotTake(null);
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
+
+      // ── Fire hot take fetch (should resolve before ~5.4s simulation ends) ──
+      fetch('/api/match-take', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: opp }),
+      })
+        .then(r => r.json())
+        .then(({ take }: { take: string }) => setMatchHotTake(take))
+        .catch(() => {});
     }
   }, [currentScenario, state, psychProfile, savePsychToFirestore]);
 
+  // ── Press conference complete ─────────────────────────────────────────────
+  const handlePressConferenceComplete = useCallback((result: PressConferenceResult) => {
+    if (!state) return;
+    const newCardsSeen = state.cardsSeen + 1;
+    const newState: GameState = {
+      ...state,
+      boardSupport: Math.min(1, Math.max(0, state.boardSupport + result.impacts.board / 100)),
+      fanSupport:   Math.min(1, Math.max(0, state.fanSupport   + result.impacts.fans  / 100)),
+      dressingRoom: Math.min(1, Math.max(0, state.dressingRoom + result.impacts.squad / 100)),
+      cardsSeen: newCardsSeen,
+    };
+    if (newState.boardSupport <= 0.05 || newState.fanSupport <= 0.05) {
+      newState.isSacked = true;
+    }
+
+    // Apply psych delta (non-visible axes only; board/fans/squad handled via game state)
+    const delta = {
+      board: 0, fans: 0, squad: 0,
+      TF: result.psychDelta.TF,
+      D:  result.psychDelta.D,
+      MP: result.psychDelta.MP,
+      MM: result.psychDelta.MM,
+      TT: result.psychDelta.TT,
+    };
+    const updatedProfile = applySwipe(psychProfile, delta);
+    setPsychProfile(updatedProfile);
+    savePsychToFirestore(updatedProfile, state.id);
+
+    setState(newState);
+    saveGameLocally(newState);
+    setShowPressConference(false);
+
+    // Check match trigger
+    if (newCardsSeen % 3 === 0) {
+      const table             = getLeagueTable(newState);
+      const possibleOpponents = table.filter(t => !t.isUser);
+      const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
+      setOpponentName(opp);
+      const matchResult = calculateMatchResult(newState);
+      setPendingResult(matchResult);
+      setMatchHotTake(null);
+      setMatchIntro(true);
+      setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
+      fetch('/api/match-take', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: opp }),
+      })
+        .then(r => r.json())
+        .then(({ take }: { take: string }) => setMatchHotTake(take))
+        .catch(() => {});
+    }
+  }, [state, psychProfile, savePsychToFirestore]);
+
   // ── Auto-timer (15 s per card) ────────────────────────────────────────────
   useEffect(() => {
-    if (!currentScenario || isSimulating || matchIntro || error || state?.isSacked || state?.isSeasonEnd) return;
+    if (!currentScenario || showPressConference || isSimulating || matchIntro || error || state?.isSacked || state?.isSeasonEnd) return;
     const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) { handleDecision('left'); return 15; }
@@ -142,7 +246,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [currentScenario, isSimulating, matchIntro, error, state?.isSacked, state?.isSeasonEnd, handleDecision]);
+  }, [currentScenario, showPressConference, isSimulating, matchIntro, error, state?.isSacked, state?.isSeasonEnd, handleDecision]);
 
   // ── Fetch next scenario (instant, local DB) ───────────────────────────────
   const fetchScenario = useCallback(() => {
@@ -170,15 +274,22 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   }, [state, activeConfig, isSimulating, matchIntro]);
 
   useEffect(() => {
-    if (state && !currentScenario && !isSimulating && !matchIntro && !state.isSacked && !state.isSeasonEnd && !error) {
-      fetchScenario();
+    if (state && !currentScenario && !showPressConference && !isSimulating && !matchIntro && !state.isSacked && !state.isSeasonEnd && !error) {
+      // Every 9th card (between match cycles) — trigger a press conference
+      if (state.cardsSeen > 0 && state.cardsSeen % 9 === 4) {
+        setShowPressConference(true);
+        setPressQuestion(getRandomPressQuestion());
+      } else {
+        fetchScenario();
+      }
     }
-  }, [state, currentScenario, isSimulating, matchIntro, error, fetchScenario]);
+  }, [state, currentScenario, showPressConference, isSimulating, matchIntro, error, fetchScenario]);
 
   // ── Match complete ────────────────────────────────────────────────────────
   const onMatchComplete = useCallback(() => {
     if (!state || !activeConfig || !pendingResult) return;
     setIsSimulating(false);
+    setMatchHotTake(null);
     const result = pendingResult;
     setPendingResult(null);
 
@@ -421,17 +532,44 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           </div>
         )}
         {isSimulating ? (
-          <MatchRadar userTeam={state.userTeam} opponentTeam={opponentName} result={pendingResult} onComplete={onMatchComplete} />
+          <MatchRadar
+            userTeam={state.userTeam}
+            opponentTeam={opponentName}
+            result={pendingResult}
+            onComplete={onMatchComplete}
+            hotTake={matchHotTake}
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center relative">
+          <div className="w-full h-full flex flex-col items-center justify-center relative gap-2">
             {error ? (
               <div className="text-center space-y-3">
                 <AlertTriangle className="w-10 h-10 text-destructive mx-auto" />
                 <p className="text-xs uppercase font-headline opacity-60 font-black">{error}</p>
                 <SlantedButton onClick={fetchScenario} className="text-[10px] py-2">Retry</SlantedButton>
               </div>
+            ) : showPressConference ? (
+              <PressConferenceCard
+                question={pressQuestion}
+                onComplete={handlePressConferenceComplete}
+              />
             ) : currentScenario ? (
-              <SwipeCard scenario={currentScenario} onDecision={handleDecision} timeLeft={timeLeft} />
+              <>
+                <SwipeCard scenario={currentScenario} onDecision={handleDecision} timeLeft={timeLeft} />
+                {/* Swipe insight toast */}
+                {swipeInsight && (
+                  <div
+                    className="w-full max-w-[300px] px-3 py-2 rounded-lg text-center animate-in fade-in slide-in-from-bottom-2 duration-400"
+                    style={{ background: 'rgba(251,177,60,0.07)', border: '1px solid rgba(251,177,60,0.15)' }}
+                  >
+                    <p
+                      className="text-[11px] italic leading-snug"
+                      style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.5)' }}
+                    >
+                      {swipeInsight}
+                    </p>
+                  </div>
+                )}
+              </>
             ) : null}
           </div>
         )}

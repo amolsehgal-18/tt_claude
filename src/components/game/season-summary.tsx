@@ -21,6 +21,16 @@ interface SeasonSummaryProps {
   onRestart:    () => void;
 }
 
+const ARCHETYPE_TAGS: Record<string, string> = {
+  'The Hairdryer':     'Master of the motivational explosion',
+  'The Father Figure': 'Loyalty above all else',
+  'The Tactician':     'The whiteboard never lies',
+  'The Showman':       'The bigger the stage, the better',
+  'The Politician':    'Every word is calculated',
+  'The Maverick':      'Rules exist to be rewritten',
+  'The Pragmatist':    'Results trump everything',
+};
+
 function getTrophy(state: GameState): string {
   if (state.isSacked) return '📋';
   const pos = state.currentLeaguePosition;
@@ -174,7 +184,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
   };
 
   return (
-    <div className="min-h-screen overflow-y-auto" style={{ background: '#07090F' }}>
+    <div className="min-h-dvh overflow-y-auto" style={{ background: '#07090F' }}>
       <style>{`
         @keyframes trophyFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
         @keyframes verdictPulse{ 0%,100%{opacity:.3} 50%{opacity:.9} }
@@ -228,6 +238,12 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
             }}>
             {archetype}
           </div>
+          {ARCHETYPE_TAGS[archetype] && (
+            <div className="text-[11px] italic"
+              style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.38)', marginTop:'2px' }}>
+              {ARCHETYPE_TAGS[archetype]}
+            </div>
+          )}
           <div className="min-h-[52px] flex items-center justify-center px-2">
             {loading ? (
               <span className="text-[14px] italic"
@@ -254,7 +270,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
         <div className="space-y-3">
           <div className="text-[9px] uppercase tracking-[0.3em]"
             style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.28)' }}>
-            The Verdict
+            Psych Profile
           </div>
           <div className="space-y-3.5">
             <PsychBar label="Tactical Flexibility" value={psychProfile.TF} color="#73D2DE" />

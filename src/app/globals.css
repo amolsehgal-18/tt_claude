@@ -86,3 +86,22 @@
   animation: scanline 4s linear infinite;
   pointer-events: none;
 }
+
+/* ── Mood ring spin ── */
+@keyframes ringRot {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.mood-ring-spin {
+  animation: ringRot 4s linear infinite;
+}
+
+/* ── Breaking dot blink ── */
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.3; transform: scale(0.6); }
+}
+
+.blink-dot {
+  animation: blink 0.8s infinite;
+}

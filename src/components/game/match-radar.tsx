@@ -10,6 +10,7 @@ interface MatchRadarProps {
   opponentTeam: string;
   result: 'win' | 'draw' | 'loss' | null;
   onComplete: () => void;
+  hotTake?: string | null;
 }
 
 interface Player {
@@ -23,7 +24,7 @@ interface Player {
   baseY: number;
 }
 
-export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete }: MatchRadarProps) => {
+export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake }: MatchRadarProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showFinal, setShowFinal] = useState(false);
   const [commentary, setCommentary] = useState("0' Kick-off! The tactical battle begins.");
@@ -306,6 +307,12 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete }: Match
             <div className="text-[11px] font-headline font-black uppercase text-center truncate w-full tracking-tight text-white">{opponentTeam}</div>
           </div>
         </div>
+        {hotTake && (
+          <p className="text-[11px] italic text-center leading-snug mb-2 animate-in fade-in duration-500"
+            style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.45)' }}>
+            &ldquo;{hotTake}&rdquo;
+          </p>
+        )}
         <SlantedButton onClick={onComplete} className="w-full py-2.5 text-[9px] font-black tracking-[0.2em] bg-white text-black uppercase">
           PROCEED TO NEXT MATCH
         </SlantedButton>
