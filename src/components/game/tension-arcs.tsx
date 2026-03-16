@@ -126,8 +126,8 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
   const initPoly = `${init.board.x},${init.board.y} ${init.fans.x},${init.fans.y} ${init.squad.x},${init.squad.y}`;
 
   return (
-    <div style={{ flexShrink: 0, width: 100, height: 90 }}>
-      <svg viewBox="0 0 120 120" width={100} height={90} fill="none" overflow="visible">
+    <div style={{ flexShrink: 0, width: 110 }}>
+      <svg viewBox="0 0 120 108" width={110} height={99} fill="none" overflow="visible" style={{ display: 'block' }}>
 
         {/* ── Grid ── */}
         <polygon points="60,14 104,94 16,94"  fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>
@@ -136,6 +136,11 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
         <line x1="60" y1="14" x2="60"  y2="94" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
         <line x1="60" y1="14" x2="16"  y2="94" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
         <line x1="60" y1="14" x2="104" y2="94" stroke="rgba(255,255,255,0.04)" strokeWidth="0.8"/>
+
+        {/* ── Axis labels — near outer triangle vertices ── */}
+        <text x="60" y="8" textAnchor="middle" fill="#1E6B3C" fontSize="7.5" fontWeight="700" letterSpacing="1" style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}>BOARD</text>
+        <text x="108" y="103" textAnchor="middle" fill="#D81159" fontSize="7.5" fontWeight="700" letterSpacing="1" style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}>FANS</text>
+        <text x="12" y="103" textAnchor="middle" fill="#73D2DE" fontSize="7.5" fontWeight="700" letterSpacing="1" style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}>SQUAD</text>
 
         {/* ── Data shape (spring-animated) ── */}
         <polygon

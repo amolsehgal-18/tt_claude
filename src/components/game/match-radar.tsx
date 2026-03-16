@@ -374,7 +374,7 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake
 
   return (
     <div className="flex flex-col items-center gap-4 w-full h-full justify-center px-4">
-      <div className="relative premium-glass p-0.5 slanted-container w-full max-w-[300px] aspect-[4/3] border-white/10 overflow-hidden shadow-inner">
+      <div className="relative premium-glass p-0.5 rounded-xl w-full max-w-[340px] aspect-[4/3] border-white/10 overflow-hidden shadow-inner">
         <canvas ref={canvasRef} width={300} height={225} className="w-full h-full" />
         <div className="absolute top-2 right-2">
           <div className="text-[9px] font-headline text-accent/80 uppercase font-black tracking-widest italic animate-pulse">

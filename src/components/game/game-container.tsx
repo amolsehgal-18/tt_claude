@@ -63,7 +63,6 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   // ── AI feature state ──────────────────────────────────────────────────────
   const [matchHotTake, setMatchHotTake]         = useState<string | null>(null);
-  const [swipeInsight, setSwipeInsight]         = useState<string | null>(null);
   const [showPressConference, setShowPressConference] = useState(false);
   const [pressQuestion, setPressQuestion]       = useState('');
   const [nextOpponentName, setNextOpponentName] = useState<string>('');
@@ -165,22 +164,6 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     saveGameLocally(newState);
     setCurrentScenario(null);
     setTimeLeft(15);
-
-    // ── Fire non-blocking swipe insight ──────────────────────────────────
-    setSwipeInsight(null);
-    const choiceText = side === 'left' ? currentScenario.leftOption : currentScenario.rightOption;
-    fetch('/api/explain', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        scenarioText: currentScenario.scenario,
-        choiceText,
-        impact: { board: impact.board, fans: impact.fans, squad: impact.squad },
-      }),
-    })
-      .then(r => r.json())
-      .then(({ insight }: { insight: string }) => setSwipeInsight(insight))
-      .catch(() => {});
 
     if (newCardsSeen > 0 && newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
@@ -451,13 +434,11 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             <div className="space-y-4">
               <SlantedButton
                 onClick={() => {
-                  try {
-                    const s = INITIAL_STATE(setupMode, setupDuration, setupName, setupTeam);
-                    setState(s);
-                    setPsychProfile(createInitialProfile());
-                    setSeasonArchetype(null);
-                    saveGameLocally(s);
-                  } catch(e) { console.error('Sign Contract failed:', e); }
+                  const s = INITIAL_STATE(setupMode, setupDuration, setupName, setupTeam);
+                  setState(s);
+                  setPsychProfile(createInitialProfile());
+                  setSeasonArchetype(null);
+                  saveGameLocally(s);
                 }}
                 className="w-full py-5 text-base font-black tracking-widest uppercase bg-white text-black">
                 Sign Contract
@@ -552,7 +533,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       </div>
 
       {/* ── Tension triangle + Manager portrait ── */}
-      <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10 h-[100px] flex-shrink-0 overflow-hidden">
+      <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10 h-[104px] flex-shrink-0 overflow-hidden">
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
         <ManagerMoodView mood={mood} />
       </div>
@@ -562,7 +543,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
       {/* ── Scenario area ── */}
       <div
-        className={`${isSimulating || showPressConference ? 'flex-1' : 'h-[220px] flex-shrink-0'} flex flex-col items-center ${showPressConference ? 'justify-start pt-2' : 'justify-center'} px-1 relative z-[80] ${showPressConference ? 'overflow-y-auto' : 'overflow-hidden'}`}
+        className={`${isSimulating || showPressConference ? 'flex-1 min-h-0' : 'h-[220px] flex-shrink-0'} flex flex-col items-center ${showPressConference ? 'justify-start pt-2' : 'justify-center'} px-1 relative z-[80] ${showPressConference ? 'overflow-y-auto' : 'overflow-hidden'}`}
         style={showPressConference ? { scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties : undefined}
       >
         {matchIntro && (
@@ -586,7 +567,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             winChance={winChance}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center relative gap-2">
+          <div className="w-full flex items-center justify-center relative bg-background">
             {error ? (
               <div className="text-center space-y-3">
                 <AlertTriangle className="w-10 h-10 text-destructive mx-auto" />
@@ -599,32 +580,16 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
                 onComplete={handlePressConferenceComplete}
               />
             ) : currentScenario ? (
-              <>
-                <SwipeCard scenario={currentScenario} onDecision={handleDecision} timeLeft={timeLeft} />
-                {/* Swipe insight toast */}
-                {swipeInsight && (
-                  <div
-                    className="w-full max-w-[300px] px-3 py-2 rounded-lg text-center animate-in fade-in slide-in-from-bottom-2 duration-400"
-                    style={{ background: 'rgba(251,177,60,0.07)', border: '1px solid rgba(251,177,60,0.15)' }}
-                  >
-                    <p
-                      className="text-[11px] italic leading-snug"
-                      style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.5)' }}
-                    >
-                      {swipeInsight}
-                    </p>
-                  </div>
-                )}
-              </>
+              <SwipeCard key={currentScenario.scenarioId} scenario={currentScenario} onDecision={handleDecision} timeLeft={timeLeft} />
             ) : null}
           </div>
         )}
       </div>
 
       {/* ── Win % bar ── */}
-      {!isSimulating && (
+      {!isSimulating && !showPressConference && (
         <div
-          className="mx-3 mb-1 flex items-center gap-3 rounded-[10px] px-3.5 py-[5px] flex-shrink-0 z-[90]"
+          className="mx-3 mb-1 mt-auto flex items-center gap-3 rounded-[10px] px-3.5 py-[5px] flex-shrink-0 z-[90]"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
           <div className="flex-shrink-0">

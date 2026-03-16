@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -90,8 +90,18 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
   const [tone,     setTone]     = useState(50);
   const [loading,  setLoading]  = useState(false);
   const [reaction, setReaction] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(5);
 
   const cards = getPlaybookCards(tone);
+
+  // 5-second countdown — auto No Comment on expiry
+  useEffect(() => {
+    if (reaction || loading) return;
+    if (timeLeft <= 0) { submit('', true); return; }
+    const t = setTimeout(() => setTimeLeft(p => p - 1), 1000);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft, reaction, loading]);
 
   const submit = async (answer: string, noComment = false) => {
     if (loading || reaction) return;
@@ -133,31 +143,40 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
         }
       `}</style>
 
-      <div className="w-full max-w-[310px] flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-[310px] flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
         {/* ── Header ── */}
         <div className="flex items-center gap-2 px-1">
-          <Mic className="w-4 h-4 flex-shrink-0" style={{ color: '#FBB13C' }} />
+          <Mic className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#FBB13C' }} />
           <span className="text-[9px] font-headline font-black uppercase tracking-[3px]" style={{ color: '#FBB13C' }}>
             Press Conference
           </span>
-          <div className="w-1 h-1 rounded-full blink-dot ml-1" style={{ background: '#FBB13C' }} />
+          <div className="w-1 h-1 rounded-full blink-dot ml-0.5" style={{ background: '#FBB13C' }} />
+          {/* Countdown */}
+          {!reaction && (
+            <div
+              className="ml-auto text-[10px] font-code font-bold tabular-nums"
+              style={{ color: timeLeft <= 2 ? '#D81159' : 'rgba(255,255,255,0.35)', transition: 'color 0.3s', minWidth: '1.5ch' }}
+            >
+              {timeLeft}s
+            </div>
+          )}
         </div>
 
         {/* ── Question card ── */}
         <div
-          className="rounded-2xl p-3 border"
+          className="rounded-xl px-3 py-1.5 border"
           style={{
             background:  'linear-gradient(150deg,#141820 0%,#0D1016 100%)',
             borderColor: 'rgba(251,177,60,0.22)',
-            boxShadow:   '0 24px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07)',
+            boxShadow:   '0 12px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)',
           }}
         >
-          <div className="flex items-center gap-1.5 mb-3 pb-2" style={{ borderBottom: '1px solid rgba(251,177,60,0.12)' }}>
-            <span className="font-headline font-black text-[10px] uppercase tracking-[2px]" style={{ color: '#FBB13C' }}>Reporter</span>
-            <span className="text-[9px] uppercase tracking-widest opacity-40 font-headline">— Post-match press room</span>
+          <div className="flex items-center gap-1.5 mb-1.5 pb-1.5" style={{ borderBottom: '1px solid rgba(251,177,60,0.12)' }}>
+            <span className="font-headline font-black text-[9px] uppercase tracking-[2px]" style={{ color: '#FBB13C' }}>Reporter</span>
+            <span className="text-[8px] uppercase tracking-widest opacity-40 font-headline">— Post-match</span>
           </div>
-          <p className="font-headline font-black text-white leading-snug italic" style={{ fontSize: '15px', fontWeight: 800 }}>
+          <p className="font-headline font-black text-white leading-snug italic" style={{ fontSize: '13px', fontWeight: 800 }}>
             &ldquo;{question}&rdquo;
           </p>
         </div>
@@ -165,7 +184,7 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
         {/* ── Reaction strip or dial + playbook ── */}
         {reaction ? (
           <div
-            className="rounded-xl px-4 py-3 text-center animate-in fade-in zoom-in duration-300"
+            className="rounded-xl px-3 py-2 text-center animate-in fade-in zoom-in duration-300"
             style={{ background: 'rgba(251,177,60,0.08)', border: '1px solid rgba(251,177,60,0.18)' }}
           >
             <p className="text-[12px] italic leading-snug" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.65)' }}>
@@ -176,7 +195,7 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
           <>
             {/* ── Tone dial ── */}
             <div className="px-1">
-              <div className="flex justify-between text-[8px] font-headline font-black uppercase tracking-[2px] mb-2" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <div className="flex justify-between text-[8px] font-headline font-black uppercase tracking-[2px] mb-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 <span style={{ color: tone < 35 ? '#73D2DE' : 'rgba(255,255,255,0.35)' }}>Composed</span>
                 <span className="text-[8px]" style={{ color: dialColor(tone), transition: 'color 0.2s' }}>
                   {tone < 35 ? '●' : tone < 65 ? '◆' : '🔥'}
@@ -197,13 +216,13 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
             </div>
 
             {/* ── Playbook cards ── */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
               {cards.map((card, i) => (
                 <button
                   key={i}
                   disabled={loading}
                   onClick={() => submit(card.text)}
-                  className="w-full text-left rounded-xl px-3 py-2.5 transition-all disabled:opacity-40 active:scale-[0.98]"
+                  className="w-full text-left rounded-xl px-3 py-1.5 transition-all disabled:opacity-40 active:scale-[0.98]"
                   style={{
                     background:  'rgba(255,255,255,0.03)',
                     border:      '1px solid rgba(255,255,255,0.08)',
@@ -217,7 +236,7 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
                     </span>
                     <span className="text-[8px] opacity-30 font-headline uppercase tracking-wide">— {card.sub}</span>
                   </div>
-                  <div className="text-[11px] font-body leading-snug" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                  <div className="text-[10px] font-body leading-snug" style={{ color: 'rgba(255,255,255,0.72)' }}>
                     {card.text}
                   </div>
                 </button>
@@ -228,7 +247,7 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
             <button
               onClick={() => submit('', true)}
               disabled={loading}
-              className="w-full py-2 rounded text-[9px] font-headline font-black uppercase tracking-widest disabled:opacity-40 transition-opacity"
+              className="w-full py-1.5 rounded text-[9px] font-headline font-black uppercase tracking-widest disabled:opacity-40 transition-opacity"
               style={{ border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.25)', background: 'transparent' }}
             >
               No Comment

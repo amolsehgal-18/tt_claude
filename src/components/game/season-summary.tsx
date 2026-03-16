@@ -119,9 +119,9 @@ function PsychBar({ label, value, color, warn }: { label: string; value: number;
 
 function TensionCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="flex-1 rounded-lg p-3 text-center" style={{ borderTop: `3px solid ${color}`, background: 'rgba(255,255,255,0.03)' }}>
-      <div className="text-2xl font-black" style={{ fontFamily: "'Barlow Condensed',sans-serif", color }}>{Math.round(value)}%</div>
-      <div className="text-[9px] uppercase tracking-widest mt-0.5"
+    <div className="flex-1 rounded-lg px-2 py-2 text-center" style={{ borderTop: `2px solid ${color}`, background: 'rgba(255,255,255,0.03)' }}>
+      <div className="text-xl font-black" style={{ fontFamily: "'Barlow Condensed',sans-serif", color }}>{Math.round(value)}%</div>
+      <div className="text-[8px] uppercase tracking-widest mt-0.5"
         style={{ fontFamily: "'Share Tech Mono',monospace", color: 'rgba(255,255,255,0.32)' }}>{label}</div>
     </div>
   );
@@ -184,74 +184,72 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
   };
 
   return (
-    <div className="min-h-dvh overflow-y-auto" style={{ background: '#07090F' }}>
+    <div className="h-dvh overflow-hidden" style={{ background: '#07090F' }}>
       <style>{`
-        @keyframes trophyFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+        @keyframes trophyFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
         @keyframes verdictPulse{ 0%,100%{opacity:.3} 50%{opacity:.9} }
       `}</style>
-      <div className="max-w-sm mx-auto px-5 py-8 space-y-6">
+      <div className="max-w-sm mx-auto px-4 pt-3 pb-4 space-y-3">
 
-        {/* 1 — Season pill */}
-        <div className="flex justify-center">
-          <span className="px-4 py-1 rounded-full text-[10px] uppercase tracking-[0.25em]"
+        {/* 1 — Season pill + trophy inline */}
+        <div className="flex items-center justify-between">
+          <span className="px-3 py-1 rounded-full text-[9px] uppercase tracking-[0.2em]"
             style={{ fontFamily:"'Share Tech Mono',monospace", background:'#FBB13C', color:'#07090F' }}>
             End of Season · {seasonYear - 1}/{String(seasonYear).slice(2)}
           </span>
+          <div className="text-4xl select-none" style={{ animation:'trophyFloat 3s ease-in-out infinite' }}>
+            {trophy}
+          </div>
         </div>
 
-        {/* 2 — Floating trophy */}
-        <div className="text-center text-7xl select-none" style={{ animation:'trophyFloat 3s ease-in-out infinite' }}>
-          {trophy}
-        </div>
-
-        {/* 3 — Club block */}
-        <div className="text-center space-y-1">
-          <div className="text-sm uppercase tracking-[0.3em]"
+        {/* 2 — Club block */}
+        <div className="text-center space-y-0.5">
+          <div className="text-[11px] uppercase tracking-[0.3em]"
             style={{ fontFamily:"'Share Tech Mono',monospace", color:'#FBB13C' }}>
             {state.currentLeaguePosition}{ordinalSuffix(state.currentLeaguePosition)} Place
           </div>
           <div className="uppercase tracking-tight leading-none text-white"
-            style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'30px', fontWeight:700 }}>
+            style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'26px', fontWeight:700 }}>
             {state.userTeam}
           </div>
-          <div className="text-[11px] mt-1"
+          <div className="text-[10px]"
             style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.32)' }}>
             W{state.wins} · D{state.draws} · L{state.losses} · {pts} pts
           </div>
         </div>
 
-        {/* 4 — Gold divider */}
+        {/* 3 — Gold divider */}
         <div className="h-px w-full"
           style={{ background:'linear-gradient(90deg,transparent,#FBB13C 30%,#FBB13C 70%,transparent)' }} />
 
-        {/* 5 — Archetype block */}
-        <div className="text-center space-y-3">
-          <div className="text-[9px] uppercase tracking-[0.4em]"
+        {/* 4 — Archetype block */}
+        <div className="text-center space-y-1.5">
+          <div className="text-[8px] uppercase tracking-[0.4em]"
             style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.28)' }}>
             You managed like
           </div>
           <div className="uppercase leading-none"
             style={{
-              fontFamily:"'Barlow Condensed',sans-serif", fontSize:'36px', fontWeight:900,
+              fontFamily:"'Barlow Condensed',sans-serif", fontSize:'26px', fontWeight:900,
               background:'linear-gradient(135deg,#FBB13C 0%,#fff 50%,#FBB13C 100%)',
               WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
             }}>
             {archetype}
           </div>
           {ARCHETYPE_TAGS[archetype] && (
-            <div className="text-[11px] italic"
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.38)', marginTop:'2px' }}>
+            <div className="text-[10px] italic"
+              style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.38)' }}>
               {ARCHETYPE_TAGS[archetype]}
             </div>
           )}
-          <div className="min-h-[52px] flex items-center justify-center px-2">
+          <div className="flex items-center justify-center px-2">
             {loading ? (
-              <span className="text-[14px] italic"
+              <span className="text-[13px] italic"
                 style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.3)', animation:'verdictPulse 1.2s ease-in-out infinite' }}>
                 · · ·
               </span>
             ) : (
-              <p className="text-[13px] italic leading-snug text-center"
+              <p className="text-[12px] italic leading-snug text-center"
                 style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.55)' }}>
                 &ldquo;{verdict}&rdquo;
               </p>
@@ -259,20 +257,20 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
           </div>
         </div>
 
-        {/* 6 — Tension triangle */}
+        {/* 5 — Tension cards */}
         <div className="flex gap-2">
           <TensionCard label="Board" value={psychProfile.board} color="#1E6B3C" />
           <TensionCard label="Fans"  value={psychProfile.fans}  color="#D81159" />
           <TensionCard label="Squad" value={psychProfile.squad} color="#73D2DE" />
         </div>
 
-        {/* 7 — Psych breakdown */}
-        <div className="space-y-3">
-          <div className="text-[9px] uppercase tracking-[0.3em]"
+        {/* 6 — Psych breakdown */}
+        <div className="space-y-2">
+          <div className="text-[8px] uppercase tracking-[0.3em]"
             style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.28)' }}>
             Psych Profile
           </div>
-          <div className="space-y-3.5">
+          <div className="space-y-2">
             <PsychBar label="Tactical Flexibility" value={psychProfile.TF} color="#73D2DE" />
             <PsychBar label="Discipline"           value={psychProfile.D}  color="#1E6B3C" />
             <PsychBar label="Media Presence"       value={psychProfile.MP} color="#FBB13C" />
@@ -283,10 +281,10 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
           </div>
         </div>
 
-        {/* 8 — Buttons */}
-        <div className="space-y-3 pb-8">
+        {/* 7 — Buttons */}
+        <div className="space-y-2">
           <button onClick={handleShare} disabled={sharing || loading}
-            className="w-full py-4 rounded uppercase tracking-widest text-white font-black text-[13px] disabled:opacity-40 transition-opacity"
+            className="w-full py-2.5 rounded uppercase tracking-widest text-white font-black text-[12px] disabled:opacity-40 transition-opacity"
             style={{
               fontFamily:"'Barlow Condensed',sans-serif",
               background: shared
@@ -296,7 +294,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
             {sharing ? 'Generating…' : shared ? 'Copied to Clipboard ✓' : 'Share Your Season'}
           </button>
           <button onClick={onRestart}
-            className="w-full py-3.5 rounded uppercase tracking-widest text-[12px] font-black transition-colors"
+            className="w-full py-2 rounded uppercase tracking-widest text-[11px] font-black transition-colors"
             style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.38)', border:'1px solid rgba(255,255,255,0.1)', background:'transparent' }}>
             New Season
           </button>
