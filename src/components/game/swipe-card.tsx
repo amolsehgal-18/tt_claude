@@ -59,7 +59,7 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
 
   return (
     <div
-      className="relative w-full max-w-[340px] h-full flex flex-col items-center justify-center cursor-grab active:cursor-grabbing px-1"
+      className="relative w-full max-w-[340px] cursor-grab active:cursor-grabbing px-1"
       onMouseDown={handleTouchStart}
       onMouseMove={handleTouchMove}
       onMouseUp={handleTouchEnd}
@@ -139,17 +139,17 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
           </div>
 
           {/* ── Card body ── */}
-          <div className="px-4 pt-4 pb-3">
-            {/* Scenario text — 23px, 800 weight */}
+          <div className="px-3 pt-[10px] pb-[10px]">
+            {/* Scenario text — 17px, 800 weight */}
             <p
               className="font-headline font-black text-white leading-snug mb-1"
-              style={{ fontSize: '23px', fontWeight: 800, letterSpacing: '0.2px' }}
+              style={{ fontSize: '17px', fontWeight: 800, letterSpacing: '0.2px' }}
             >
               {scenario.scenario}
             </p>
 
             {/* ── Impact chips — right-swipe preview (Board / Fans / Squad only) ── */}
-            <div className="flex gap-1.5 flex-wrap mt-2 mb-1">
+            <div className="flex gap-1.5 flex-wrap mt-1">
               {scenario.impactRight.board !== 0 && (
                 <span className="text-[10px] font-headline font-bold px-1.5 py-[1px] rounded-full border"
                   style={scenario.impactRight.board > 0
@@ -177,11 +177,11 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
             </div>
 
             {/* Option cards — amber glow on active swipe, dim idle */}
-            <div className="grid grid-cols-2 gap-2 mt-4">
+            <div className="grid grid-cols-2 gap-2 mt-2">
               {/* Left option */}
               <div
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-3 rounded-xl border text-center transition-all duration-150 select-none",
+                  "flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-xl border text-center transition-all duration-150 select-none",
                   isLeft ? "scale-105" : ""
                 )}
                 style={{
@@ -192,7 +192,7 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
                   pointerEvents: 'none',
                 }}
               >
-                <div className={cn("font-headline font-black text-[13px] leading-snug transition-colors duration-150", isLeft ? "text-white" : "text-white/50")}>
+                <div className={cn("font-headline font-black text-[11px] leading-snug transition-colors duration-150", isLeft ? "text-white" : "text-white/50")}>
                   {scenario.leftOption}
                 </div>
               </div>
@@ -200,7 +200,7 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
               {/* Right option */}
               <div
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-3 rounded-xl border text-center transition-all duration-150 select-none",
+                  "flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-xl border text-center transition-all duration-150 select-none",
                   isRight ? "scale-105" : ""
                 )}
                 style={{
@@ -211,20 +211,11 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
                   pointerEvents: 'none',
                 }}
               >
-                <div className={cn("font-headline font-black text-[13px] leading-snug transition-colors duration-150", isRight ? "text-white" : "text-white/50")}>
+                <div className={cn("font-headline font-black text-[11px] leading-snug transition-colors duration-150", isRight ? "text-white" : "text-white/50")}>
                   {scenario.rightOption}
                 </div>
               </div>
             </div>
-
-            {/* Swipe hint when idle — white text, red ← and board-green → */}
-            {swipeAmt < 15 && (
-              <div className="text-center mt-3 flex items-center justify-center gap-1.5">
-                <span className="font-headline font-black text-[11px]" style={{ color: '#D81159' }}>←</span>
-                <span className="font-headline font-black text-[9px] uppercase tracking-[0.4em] text-white opacity-60">swipe to decide</span>
-                <span className="font-headline font-black text-[11px]" style={{ color: '#1E6B3C' }}>→</span>
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -133,7 +133,7 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
         }
       `}</style>
 
-      <div className="w-full max-w-[310px] flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-[310px] flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
         {/* ── Header ── */}
         <div className="flex items-center gap-2 px-1">
@@ -146,7 +146,7 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
 
         {/* ── Question card ── */}
         <div
-          className="rounded-2xl p-4 border"
+          className="rounded-2xl p-3 border"
           style={{
             background:  'linear-gradient(150deg,#141820 0%,#0D1016 100%)',
             borderColor: 'rgba(251,177,60,0.22)',

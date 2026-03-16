@@ -18,7 +18,7 @@ export const ManagerMoodView = ({ mood }: { mood: ManagerMood }) => {
   return (
     <div className="flex flex-col items-center gap-1 bg-transparent">
       {/* Portrait with plum mood-ring glow */}
-      <div className="relative w-[56px] h-[56px]">
+      <div className="relative w-[60px] h-[60px]">
         {/* Rotating plum ring — sits behind the portrait */}
         <div
           className="absolute rounded-full mood-ring-spin"

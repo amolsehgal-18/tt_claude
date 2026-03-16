@@ -510,7 +510,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           <div className="text-[8px] font-headline font-black uppercase tracking-[3px] mb-0.5" style={{ color: '#FBB13C' }}>
             {CAREER_MODES[state.mode].name}
           </div>
-          <div className="text-[17px] font-headline font-black uppercase leading-none text-white truncate">
+          <div className="text-[18px] font-headline font-black uppercase leading-none text-white truncate">
             {state.userTeam}
           </div>
           <div className="font-code text-[7px] text-white mt-0.5" style={{ letterSpacing: '1px' }}>
@@ -546,13 +546,13 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             <div className="text-[11px] font-headline font-black text-center" style={{ color: team.isUser ? '#73D2DE' : '#5A6878' }}>{team.pos}</div>
             <div className="text-[12px] font-headline font-black uppercase truncate" style={{ color: team.isUser ? '#73D2DE' : '#EDF2FF' }}>{team.team}</div>
             <div className="font-code text-[10px] text-center opacity-50">{team.gp}</div>
-            <div className="text-[14px] font-headline font-black text-right" style={{ color: team.isUser ? '#73D2DE' : '#EDF2FF' }}>{team.pts}</div>
+            <div className="text-[15px] font-headline font-black text-right" style={{ color: team.isUser ? '#73D2DE' : '#EDF2FF' }}>{team.pts}</div>
           </div>
         ))}
       </div>
 
       {/* ── Tension triangle + Manager portrait ── */}
-      <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10">
+      <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10 h-[100px] flex-shrink-0 overflow-hidden">
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
         <ManagerMoodView mood={mood} />
       </div>
@@ -561,7 +561,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       <div className="mx-3 my-1 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(251,177,60,0.12),transparent)' }} />
 
       {/* ── Scenario area ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-1 relative overflow-hidden z-[80]">
+      <div
+        className={`${isSimulating || showPressConference ? 'flex-1' : 'h-[220px] flex-shrink-0'} flex flex-col items-center ${showPressConference ? 'justify-start pt-2' : 'justify-center'} px-1 relative z-[80] ${showPressConference ? 'overflow-y-auto' : 'overflow-hidden'}`}
+        style={showPressConference ? { scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties : undefined}
+      >
         {matchIntro && (
           <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center bg-background/95 backdrop-blur-xl animate-in fade-in duration-500">
             <div className="space-y-2 text-center">
@@ -621,7 +624,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       {/* ── Win % bar ── */}
       {!isSimulating && (
         <div
-          className="mx-3 mb-1 flex items-center gap-3 rounded-[10px] px-3.5 py-2.5 flex-shrink-0 z-[90]"
+          className="mx-3 mb-1 flex items-center gap-3 rounded-[10px] px-3.5 py-[5px] flex-shrink-0 z-[90]"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
           <div className="flex-shrink-0">
@@ -633,7 +636,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
               {winChance}%
             </div>
           </div>
-          <div className="flex-1 h-[5px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+          <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
             <div
               className="h-full rounded-full"
               style={{
@@ -669,8 +672,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         >
           BREAKING
         </div>
-        {/* Masked scroll area — starts after badge to prevent overlap */}
-        <div style={{ overflow: 'hidden', marginLeft: '88px' }}>
+        {/* Scroll area — starts after badge, right-edge fade prevents hard clip */}
+        <div style={{ overflow: 'hidden', marginLeft: '88px', WebkitMaskImage: 'linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%)', maskImage: 'linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%)' }}>
           <div className="animate-ticker flex items-center">
             {[...newsItems, ...newsItems].map((item, idx) => (
               <React.Fragment key={idx}>
