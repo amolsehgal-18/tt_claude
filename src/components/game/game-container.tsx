@@ -1,7 +1,10 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult } from '@/lib/game-logic';
+import {
+  GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable,
+  CAREER_MODES, CareerMode, calculateMatchResult, simulateLeagueMatchday, updateMomentum,
+} from '@/lib/game-logic';
 import { SlantedButton } from './slanted-elements';
 import { ManagerMoodView } from './manager-mood';
 import { MatchRadar } from './match-radar';
@@ -11,23 +14,21 @@ import { SeasonSummary } from './season-summary';
 import { getLocalScenario } from '@/lib/scenario-engine';
 import type { LocalScenario } from '@/lib/scenario-engine';
 import {
-  createInitialProfile,
-  applySwipe,
-  deriveArchetype,
-  profileToFirestore,
+  createInitialProfile, applySwipe, deriveArchetype, profileToFirestore,
 } from '@/lib/psychProfile';
 import type { PsychProfile, Archetype } from '@/lib/psychProfile';
-import { AlertTriangle, Zap, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Zap, ArrowRight, Flame } from 'lucide-react';
 import { PressConferenceCard, getRandomPressQuestion } from './press-conference-card';
 import type { PressConferenceResult } from './press-conference-card';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { loadReputation, saveReputation, createReputation, updateReputation } from '@/lib/manager-reputation';
+import type { ManagerReputation } from '@/lib/manager-reputation';
+import type { WeeklyChallengeConfig } from '@/lib/weekly-challenge';
 
 // ── Sync client-side hot-take fallbacks (result-indexed) ─────────────────────
-// These are set immediately so the result screen always shows a matching quote,
-// even if the API response is slow or comes back stale from a previous match.
 const CLIENT_FALLBACKS: Record<'win' | 'draw' | 'loss', string[]> = {
   win:  [
     "Three points. Unconvincing, functional, sufficient.",
@@ -46,13 +47,34 @@ const CLIENT_FALLBACKS: Record<'win' | 'draw' | 'loss', string[]> = {
   ],
 };
 
-export const GameContainer = ({ initialState }: { initialState?: GameState }) => {
+// ── Momentum colour helper ────────────────────────────────────────────────────
+function momentumColor(m: number): string {
+  if (m >= 65) return '#1E6B3C';
+  if (m >= 40) return '#FBB13C';
+  return '#D81159';
+}
+
+function momentumLabel(m: number): string {
+  if (m >= 75) return 'SURGE';
+  if (m >= 55) return 'BUILDING';
+  if (m >= 40) return 'NEUTRAL';
+  if (m >= 25) return 'FADING';
+  return 'CRISIS';
+}
+
+interface GameContainerProps {
+  initialState?: GameState;
+  weeklyConfig?: WeeklyChallengeConfig;
+}
+
+export const GameContainer = ({ initialState, weeklyConfig }: GameContainerProps) => {
   const [state, setState]                   = useState<GameState | null>(initialState || null);
   const [currentScenario, setCurrentScenario] = useState<LocalScenario | null>(null);
   const [isSimulating, setIsSimulating]     = useState(false);
   const [matchIntro, setMatchIntro]         = useState(false);
   const [pendingResult, setPendingResult]   = useState<'win' | 'draw' | 'loss' | null>(null);
   const [opponentName, setOpponentName]     = useState<string>("");
+  const [opponentPosition, setOpponentPosition] = useState<number>(10);
   const [error, setError]                   = useState<string | null>(null);
   const [timeLeft, setTimeLeft]             = useState(15);
 
@@ -66,19 +88,28 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [showPressConference, setShowPressConference] = useState(false);
   const [pressQuestion, setPressQuestion]       = useState('');
   const [nextOpponentName, setNextOpponentName] = useState<string>('');
+  const [nextOpponentPosition, setNextOpponentPosition] = useState<number>(10);
+
+  // ── Reputation ────────────────────────────────────────────────────────────
+  const [reputation, setReputation] = useState<ManagerReputation | null>(null);
 
   // ── Setup wizard ──────────────────────────────────────────────────────────
-  const [setupStep, setSetupStep]       = useState(0);
-  const [setupMode, setSetupMode]       = useState<CareerMode>('season');
-  const [setupDuration, setSetupDuration] = useState(0);
+  const [setupStep, setSetupStep]       = useState(weeklyConfig ? 3 : 0);
+  const [setupMode, setSetupMode]       = useState<CareerMode>(weeklyConfig?.mode ?? 'season');
+  const [setupDuration, setSetupDuration] = useState(weeklyConfig?.durationIndex ?? 0);
   const [setupName, setSetupName]       = useState("Gaffer");
-  const [setupTeam, setSetupTeam]       = useState("United FC");
+  const [setupTeam, setSetupTeam]       = useState(weeklyConfig?.teamName ?? "United FC");
 
   const isFetchingRef  = useRef(false);
   const matchGenRef    = useRef(0);
 
   const { firestore } = useFirestore();
   const { user }      = useUser();
+
+  // Load reputation once on mount
+  useEffect(() => {
+    setReputation(loadReputation());
+  }, []);
 
   // ── Live news ticker ──────────────────────────────────────────────────────
   const DEFAULT_NEWS = [
@@ -99,7 +130,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   ];
   const [newsItems, setNewsItems] = useState<string[]>(DEFAULT_NEWS);
 
-  // Fetch contextual news when a game session starts (once per game ID)
+  // Fetch contextual news when a game session starts
   useEffect(() => {
     if (!state) return;
     fetch('/api/news', {
@@ -141,6 +172,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     const impact      = side === 'left' ? currentScenario.impactLeft : currentScenario.impactRight;
     const newCardsSeen = state.cardsSeen + 1;
 
+    // Update momentum from this decision's combined impact
+    const impactSum = impact.board + impact.fans + impact.squad;
+    const newMomentum = updateMomentum(state.momentum, impactSum);
+
     const newState: GameState = {
       ...state,
       boardSupport: Math.min(1, Math.max(0, state.boardSupport + (impact.board / 100))),
@@ -148,7 +183,17 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       dressingRoom: Math.min(1, Math.max(0, state.dressingRoom + (impact.squad / 100))),
       cardsSeen: newCardsSeen,
       history:   [...state.history, currentScenario.scenarioId],
+      momentum:  newMomentum,
     };
+
+    // ── Flag management ───────────────────────────────────────────────────
+    const newFlags = [...newState.flags];
+    if (newState.dressingRoom < 0.25 && !newFlags.includes('squad_crisis'))    newFlags.push('squad_crisis');
+    if (newState.boardSupport < 0.25 && !newFlags.includes('board_crisis'))    newFlags.push('board_crisis');
+    if (newState.fanSupport   < 0.25 && !newFlags.includes('fan_revolt'))      newFlags.push('fan_revolt');
+    if (newMomentum >= 75 && !newFlags.includes('momentum_surge'))             newFlags.push('momentum_surge');
+    if (newState.losses >= 5 && !newFlags.includes('winless_run'))             newFlags.push('winless_run');
+    newState.flags = newFlags;
 
     if (newState.boardSupport <= 0.05 || newState.fanSupport <= 0.05) {
       newState.isSacked = true;
@@ -168,29 +213,32 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     if (newCardsSeen > 0 && newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
       const possibleOpponents = table.filter(t => !t.isUser);
-      const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
-      setOpponentName(opp);
-      // Pre-pick next fixture opponent for the result card
-      const otherOpps = possibleOpponents.filter(t => t.team !== opp);
-      setNextOpponentName(otherOpps.length ? otherOpps[Math.floor(Math.random() * otherOpps.length)].team : opp);
-      const matchResult = calculateMatchResult(newState);
+      const oppEntry          = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)];
+      setOpponentName(oppEntry.team);
+      setOpponentPosition(oppEntry.pos);
+
+      const otherOpps = possibleOpponents.filter(t => t.team !== oppEntry.team);
+      const nextOpp   = otherOpps.length ? otherOpps[Math.floor(Math.random() * otherOpps.length)] : oppEntry;
+      setNextOpponentName(nextOpp.team);
+      setNextOpponentPosition(nextOpp.pos);
+
+      const matchResult = calculateMatchResult(newState, oppEntry.pos);
       setPendingResult(matchResult);
-      // ── Immediately set a result-correct fallback (prevents stale-API bleed) ──
+
       matchGenRef.current += 1;
-      const thisGen1 = matchGenRef.current;
-      const pool1 = CLIENT_FALLBACKS[matchResult];
-      setMatchHotTake(pool1[Math.floor(Math.random() * pool1.length)]);
+      const thisGen = matchGenRef.current;
+      const pool = CLIENT_FALLBACKS[matchResult];
+      setMatchHotTake(pool[Math.floor(Math.random() * pool.length)]);
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
 
-      // ── Fire hot take fetch — only apply if still the current match ──
       fetch('/api/match-take', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: opp }),
+        body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: oppEntry.team }),
       })
         .then(r => r.json())
-        .then(({ take }: { take: string }) => { if (matchGenRef.current === thisGen1) setMatchHotTake(take); })
+        .then(({ take }: { take: string }) => { if (matchGenRef.current === thisGen) setMatchHotTake(take); })
         .catch(() => {});
     }
   }, [currentScenario, state, psychProfile, savePsychToFirestore]);
@@ -199,25 +247,34 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const handlePressConferenceComplete = useCallback((result: PressConferenceResult) => {
     if (!state) return;
     const newCardsSeen = state.cardsSeen + 1;
+
+    const impactSum = result.impacts.board + result.impacts.fans + result.impacts.squad;
+    const newMomentum = updateMomentum(state.momentum, impactSum);
+
     const newState: GameState = {
       ...state,
       boardSupport: Math.min(1, Math.max(0, state.boardSupport + result.impacts.board / 100)),
       fanSupport:   Math.min(1, Math.max(0, state.fanSupport   + result.impacts.fans  / 100)),
       dressingRoom: Math.min(1, Math.max(0, state.dressingRoom + result.impacts.squad / 100)),
       cardsSeen: newCardsSeen,
+      momentum:  newMomentum,
     };
+
+    const newFlags = [...newState.flags];
+    if (newState.dressingRoom < 0.25 && !newFlags.includes('squad_crisis'))    newFlags.push('squad_crisis');
+    if (newState.boardSupport < 0.25 && !newFlags.includes('board_crisis'))    newFlags.push('board_crisis');
+    if (newState.fanSupport   < 0.25 && !newFlags.includes('fan_revolt'))      newFlags.push('fan_revolt');
+    if (newMomentum >= 75 && !newFlags.includes('momentum_surge'))             newFlags.push('momentum_surge');
+    newState.flags = newFlags;
+
     if (newState.boardSupport <= 0.05 || newState.fanSupport <= 0.05) {
       newState.isSacked = true;
     }
 
-    // Apply psych delta (non-visible axes only; board/fans/squad handled via game state)
     const delta = {
       board: 0, fans: 0, squad: 0,
-      TF: result.psychDelta.TF,
-      D:  result.psychDelta.D,
-      MP: result.psychDelta.MP,
-      MM: result.psychDelta.MM,
-      TT: result.psychDelta.TT,
+      TF: result.psychDelta.TF, D: result.psychDelta.D,
+      MP: result.psychDelta.MP, MM: result.psychDelta.MM, TT: result.psychDelta.TT,
     };
     const updatedProfile = applySwipe(psychProfile, delta);
     setPsychProfile(updatedProfile);
@@ -227,28 +284,32 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     saveGameLocally(newState);
     setShowPressConference(false);
 
-    // Check match trigger
     if (newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
       const possibleOpponents = table.filter(t => !t.isUser);
-      const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
-      setOpponentName(opp);
-      const otherOpps2 = possibleOpponents.filter(t => t.team !== opp);
-      setNextOpponentName(otherOpps2.length ? otherOpps2[Math.floor(Math.random() * otherOpps2.length)].team : opp);
-      const matchResult = calculateMatchResult(newState);
+      const oppEntry          = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)];
+      setOpponentName(oppEntry.team);
+      setOpponentPosition(oppEntry.pos);
+
+      const otherOpps2 = possibleOpponents.filter(t => t.team !== oppEntry.team);
+      const nextOpp2   = otherOpps2.length ? otherOpps2[Math.floor(Math.random() * otherOpps2.length)] : oppEntry;
+      setNextOpponentName(nextOpp2.team);
+      setNextOpponentPosition(nextOpp2.pos);
+
+      const matchResult = calculateMatchResult(newState, oppEntry.pos);
       setPendingResult(matchResult);
-      // ── Immediately set a result-correct fallback (prevents stale-API bleed) ──
+
       matchGenRef.current += 1;
       const thisGen2 = matchGenRef.current;
       const pool2 = CLIENT_FALLBACKS[matchResult];
       setMatchHotTake(pool2[Math.floor(Math.random() * pool2.length)]);
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
-      // ── Fire hot take fetch — only apply if still the current match ──
+
       fetch('/api/match-take', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: opp }),
+        body: JSON.stringify({ result: matchResult, userTeam: state.userTeam, opponentTeam: oppEntry.team }),
       })
         .then(r => r.json())
         .then(({ take }: { take: string }) => { if (matchGenRef.current === thisGen2) setMatchHotTake(take); })
@@ -284,8 +345,16 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         sagaObjective:         CAREER_MODES[state.mode].name,
         objectiveMet:          state.currentLeaguePosition <= activeConfig!.target,
         excludedScenarioIds:   state.history.slice(-50),
+        flags:                 state.flags,
       });
-      setCurrentScenario(result);
+      setCurrentScenario(result.scenario);
+      // Consume the flag if a consequence scenario fired
+      if (result.consumedFlag) {
+        setState(prev => prev
+          ? { ...prev, flags: prev.flags.filter(f => f !== result.consumedFlag) }
+          : prev
+        );
+      }
     } catch {
       setError("Scenario load failed. Tap to retry.");
     } finally {
@@ -295,7 +364,6 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   useEffect(() => {
     if (state && !currentScenario && !showPressConference && !isSimulating && !matchIntro && !state.isSacked && !state.isSeasonEnd && !error) {
-      // Every 9th card (between match cycles) — trigger a press conference
       if (state.cardsSeen > 0 && state.cardsSeen % 9 === 4) {
         setShowPressConference(true);
         setPressQuestion(getRandomPressQuestion());
@@ -311,11 +379,16 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setIsSimulating(false);
     setMatchHotTake(null);
     setNextOpponentName('');
+    setNextOpponentPosition(10);
     const result = pendingResult;
     setPendingResult(null);
 
     const newMatchesPlayed = state.matchesPlayed + 1;
     const ptsEarned        = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
+
+    // Simulate the rest of the league matchday
+    const updatedTeamPoints = simulateLeagueMatchday(state);
+
     const newState: GameState = {
       ...state,
       matchesPlayed: newMatchesPlayed,
@@ -323,7 +396,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       draws:         result === 'draw' ? state.draws + 1 : state.draws,
       losses:        result === 'loss' ? state.losses + 1 : state.losses,
       points:        state.points + ptsEarned,
+      teamPoints:    updatedTeamPoints,
       isSeasonEnd:   newMatchesPlayed >= activeConfig.matches,
+      // Reset momentum slightly toward 50 after each match
+      momentum: Math.round(state.momentum * 0.7 + 50 * 0.3),
     };
 
     const table = getLeagueTable(newState);
@@ -335,13 +411,18 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setState(newState);
     saveGameLocally(newState);
 
-    // ── Full psych save on match complete ─────────────────────────────────
     savePsychToFirestore(psychProfile, state.id);
 
-    // ── Derive archetype at season end ────────────────────────────────────
     if (newState.isSeasonEnd) {
       const arch = deriveArchetype(psychProfile);
       setSeasonArchetype(arch);
+
+      // Update persistent reputation
+      const existingRep = reputation ?? createReputation(newState.managerName);
+      const updatedRep  = updateReputation(existingRep, newState, arch);
+      saveReputation(updatedRep);
+      setReputation(updatedRep);
+
       if (firestore && user) {
         const ref = doc(firestore, 'sessions', `${user.uid}_${state.id}`);
         setDocumentNonBlocking(ref, {
@@ -353,9 +434,24 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           },
           completedAt: new Date().toISOString(),
         }, { merge: true } as Parameters<typeof setDocumentNonBlocking>[2]);
+
+        // Weekly challenge leaderboard entry
+        if (newState.isWeeklyChallenge && newState.weeklySeed) {
+          const weekRef = doc(firestore, 'weekly_challenges', `${newState.weeklySeed}_${user.uid}`);
+          setDocumentNonBlocking(weekRef, {
+            uid:         user.uid,
+            weeklySeed:  newState.weeklySeed,
+            managerName: newState.managerName,
+            teamName:    newState.userTeam,
+            points:      newState.points,
+            position:    newState.currentLeaguePosition,
+            archetype:   arch,
+            completedAt: new Date().toISOString(),
+          }, {} as Parameters<typeof setDocumentNonBlocking>[2]);
+        }
       }
     }
-  }, [state, activeConfig, pendingResult, psychProfile, savePsychToFirestore, firestore, user]);
+  }, [state, activeConfig, pendingResult, psychProfile, savePsychToFirestore, firestore, user, reputation]);
 
   // ── League table windowing ────────────────────────────────────────────────
   const windowedLeagueTable = useMemo(() => {
@@ -370,11 +466,21 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   // ── Setup screen ──────────────────────────────────────────────────────────
   if (!state) {
+    // If weeklyConfig is set, go straight to step 3 (name input only, team/mode are fixed)
     return (
       <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto bg-background p-6 items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 40% at 50% 100%, rgba(251,177,60,0.08) 0%, transparent 70%)' }} />
 
-        {setupStep === 0 && (
+        {weeklyConfig && (
+          <div className="absolute top-4 left-0 right-0 flex justify-center z-50">
+            <div className="px-3 py-1 rounded-full text-[9px] font-headline font-black uppercase tracking-[0.3em]"
+              style={{ background: 'rgba(251,177,60,0.15)', border: '1px solid rgba(251,177,60,0.3)', color: '#FBB13C' }}>
+              🏆 Weekly Challenge · {weeklyConfig.weekLabel}
+            </div>
+          </div>
+        )}
+
+        {setupStep === 0 && !weeklyConfig && (
           <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center z-50">
             <div className="space-y-1">
               <h1 className="text-3xl font-headline font-black uppercase italic" style={{ color: '#FBB13C' }}>Gaffer Protocol</h1>
@@ -447,6 +553,40 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             </div>
           </div>
         )}
+
+        {/* Weekly challenge or resumed game — just confirm manager name */}
+        {setupStep === 3 && weeklyConfig && (
+          <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center z-50">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-headline font-black uppercase italic" style={{ color: '#FBB13C' }}>Weekly Gaffer</h2>
+              <p className="text-[9px] font-headline uppercase tracking-[0.3em] opacity-40 font-black">
+                {CAREER_MODES[weeklyConfig.mode].name} · {CAREER_MODES[weeklyConfig.mode].durations[weeklyConfig.durationIndex].label}
+              </p>
+              <p className="text-[11px] font-headline uppercase mt-1" style={{ color: '#73D2DE' }}>{weeklyConfig.teamName}</p>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1 text-left">
+                <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest px-1">Your Manager Name</label>
+                <Input value={setupName} onChange={(e) => setSetupName(e.target.value)} className="bg-white/5 h-11 border-white/10 font-bold text-sm" />
+              </div>
+              <SlantedButton
+                onClick={() => {
+                  const s = INITIAL_STATE(
+                    weeklyConfig.mode, weeklyConfig.durationIndex,
+                    setupName, weeklyConfig.teamName,
+                    true, weeklyConfig.seed
+                  );
+                  setState(s);
+                  setPsychProfile(createInitialProfile());
+                  setSeasonArchetype(null);
+                  saveGameLocally(s);
+                }}
+                className="w-full py-5 text-base font-black tracking-widest uppercase bg-white text-black">
+                Accept the Challenge
+              </SlantedButton>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -459,10 +599,15 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         state={state}
         psychProfile={psychProfile}
         archetype={arch}
+        reputation={reputation}
         onRestart={() => {
           setState(null);
           setPsychProfile(createInitialProfile());
           setSeasonArchetype(null);
+          setSetupStep(0);
+          setSetupTeam("United FC");
+          setSetupMode('season');
+          setSetupDuration(0);
         }}
       />
     );
@@ -470,7 +615,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   const mood      = calculateMood(state);
   const currentGW = activeConfig ? activeConfig.startGW + state.matchesPlayed : 0;
-  const winChance = Math.round((0.30 + state.boardSupport * 0.20 + state.dressingRoom * 0.20) * 100);
+  const momentum  = state.momentum ?? 50;
 
   return (
     <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto relative overflow-hidden bg-background shadow-2xl border-x border-white/5">
@@ -489,7 +634,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       >
         <div className="py-1.5 pl-3 pr-2 min-w-0">
           <div className="text-[8px] font-headline font-black uppercase tracking-[3px] mb-0.5" style={{ color: '#FBB13C' }}>
-            {CAREER_MODES[state.mode].name}
+            {CAREER_MODES[state.mode].name}{state.isWeeklyChallenge ? ' · 🏆' : ''}
           </div>
           <div className="text-[18px] font-headline font-black uppercase leading-none text-white truncate">
             {state.userTeam}
@@ -552,6 +697,13 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
               <Zap className="w-10 h-10 mx-auto animate-bounce" style={{ color: '#FBB13C' }} />
               <h2 className="text-4xl font-headline font-black uppercase italic text-white tracking-tighter">MATCHDAY</h2>
               <div className="text-[10px] font-headline font-black uppercase tracking-[0.4em]" style={{ color: '#FBB13C' }}>Deploying Tactics</div>
+              {/* Momentum indicator in match intro */}
+              <div className="flex items-center justify-center gap-2 mt-1">
+                <Flame className="w-4 h-4" style={{ color: momentumColor(momentum) }} />
+                <span className="font-code text-[11px] font-bold" style={{ color: momentumColor(momentum) }}>
+                  {momentumLabel(momentum)} MOMENTUM
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -559,12 +711,14 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           <MatchRadar
             userTeam={state.userTeam}
             opponentTeam={opponentName}
+            opponentPosition={opponentPosition}
             result={pendingResult}
             onComplete={onMatchComplete}
             hotTake={matchHotTake}
             nextOpponent={nextOpponentName}
+            nextOpponentPosition={nextOpponentPosition}
             nextGW={currentGW + 1}
-            winChance={winChance}
+            momentum={momentum}
           />
         ) : (
           <div className="w-full flex items-center justify-center relative bg-background">
@@ -586,37 +740,37 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         )}
       </div>
 
-      {/* ── Win % bar ── */}
+      {/* ── Momentum bar (replaces old win% bar) ── */}
       {!isSimulating && !showPressConference && (
         <div
           className="mx-3 mb-1 mt-auto flex items-center gap-3 rounded-[10px] px-3.5 py-[5px] flex-shrink-0 z-[90]"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
           <div className="flex-shrink-0">
-            <div className="font-code text-[7px] uppercase tracking-[2.5px] mb-0.5" style={{ color: '#4E5A6E' }}>Win chance</div>
+            <div className="font-code text-[7px] uppercase tracking-[2.5px] mb-0.5" style={{ color: '#4E5A6E' }}>Momentum</div>
             <div
-              className="text-[24px] font-headline font-black leading-none"
-              style={{ color: winChance >= 55 ? '#1E6B3C' : winChance >= 40 ? '#FBB13C' : '#D81159', transition: 'color 0.4s' }}
+              className="text-[20px] font-headline font-black leading-none"
+              style={{ color: momentumColor(momentum), transition: 'color 0.4s' }}
             >
-              {winChance}%
+              {momentumLabel(momentum)}
             </div>
           </div>
           <div className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
             <div
               className="h-full rounded-full"
               style={{
-                width: `${winChance}%`,
+                width: `${momentum}%`,
                 transition: 'width 0.5s cubic-bezier(.4,0,.2,1), background 0.4s',
-                background: winChance >= 55
+                background: momentum >= 65
                   ? 'linear-gradient(90deg,#1E6B3C,rgba(30,107,60,0.5))'
-                  : winChance >= 40
+                  : momentum >= 40
                   ? 'linear-gradient(90deg,#FBB13C,rgba(251,177,60,0.5))'
                   : 'linear-gradient(90deg,#D81159,rgba(216,17,89,0.4))',
               }}
             />
           </div>
-          <div className="font-code text-[8px] uppercase tracking-wide text-right flex-shrink-0 leading-snug" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Next<br/>Match
+          <div className="font-code text-[11px] font-bold text-right flex-shrink-0" style={{ color: momentumColor(momentum), minWidth: '28px' }}>
+            {momentum}
           </div>
         </div>
       )}
@@ -630,14 +784,12 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           paddingBottom: 'max(9px, env(safe-area-inset-bottom, 0px))',
         }}
       >
-        {/* Badge — absolute, sits on top of scroll area */}
         <div
           className="absolute left-0 top-0 bottom-0 z-20 flex items-center px-3 font-grotesk font-bold text-[11px] uppercase text-black whitespace-nowrap"
           style={{ letterSpacing: '2.5px', background: 'rgba(0,0,0,0.18)', borderRight: '2px solid rgba(0,0,0,0.15)' }}
         >
           BREAKING
         </div>
-        {/* Scroll area — starts after badge, right-edge fade prevents hard clip */}
         <div style={{ overflow: 'hidden', marginLeft: '88px', WebkitMaskImage: 'linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%)', maskImage: 'linear-gradient(to right, black 0%, black calc(100% - 28px), transparent 100%)' }}>
           <div className="animate-ticker flex items-center">
             {[...newsItems, ...newsItems].map((item, idx) => (

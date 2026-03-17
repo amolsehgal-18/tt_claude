@@ -8,9 +8,9 @@ export interface CareerConfig {
 }
 
 export const CAREER_MODES: Record<CareerMode, CareerConfig> = {
-  title: { 
+  title: {
     id: 'title',
-    name: "League Title", 
+    name: "League Title",
     description: "Win the league or you're out. Zero tolerance.",
     durations: [
       { label: "Final Push (6)", matches: 6, target: 1, startGW: 33 },
@@ -18,9 +18,9 @@ export const CAREER_MODES: Record<CareerMode, CareerConfig> = {
       { label: "Title Race (10)", matches: 10, target: 1, startGW: 29 }
     ]
   },
-  top4: { 
+  top4: {
     id: 'top4',
-    name: "Top 4 $$", 
+    name: "Top 4 $$",
     description: "Champions League qualification is the only goal.",
     durations: [
       { label: "Final Stretch (6)", matches: 6, target: 4, startGW: 33 },
@@ -28,9 +28,9 @@ export const CAREER_MODES: Record<CareerMode, CareerConfig> = {
       { label: "Euro Hunt (10)", matches: 10, target: 4, startGW: 29 }
     ]
   },
-  relegation: { 
+  relegation: {
     id: 'relegation',
-    name: "Relegation Battle", 
+    name: "Relegation Battle",
     description: "Keep them up by any means necessary.",
     durations: [
       { label: "Great Escape (6)", matches: 6, target: 17, startGW: 33 },
@@ -38,9 +38,9 @@ export const CAREER_MODES: Record<CareerMode, CareerConfig> = {
       { label: "The Fight (10)", matches: 10, target: 17, startGW: 29 }
     ]
   },
-  season: { 
+  season: {
     id: 'season',
-    name: "Full Season", 
+    name: "Full Season",
     description: "Classic managerial campaign.",
     durations: [
       { label: "Half Season (19)", matches: 19, target: 10, startGW: 20 },
@@ -56,6 +56,14 @@ export type LeagueTeam = {
   pts: number;
   isUser: boolean;
 };
+
+// All 20 team names — "United FC" is the user's slot (index 10)
+export const TEAM_NAMES = [
+  "City", "Reds", "London Blue", "North White", "Villa",
+  "Toffees", "Seagulls", "Eagles", "Wolves", "Hammers",
+  "United FC", "Magpies", "Hornets", "Cherries", "Saints",
+  "Forest", "Foxes", "Bees", "Clarets", "Hatters"
+];
 
 export type GameState = {
   id: string;
@@ -77,6 +85,12 @@ export type GameState = {
   isSacked: boolean;
   isSeasonEnd: boolean;
   history: string[];
+  // New fields
+  momentum: number;             // 0–100: decision momentum going into each match
+  flags: string[];              // active consequence flags
+  teamPoints: Record<string, number>; // simulated points for all 20 teams
+  isWeeklyChallenge?: boolean;  // playing the weekly challenge mode
+  weeklySeed?: number;          // seed for the current weekly challenge
 };
 
 const getPPGForPosition = (pos: number): number => {
@@ -89,14 +103,24 @@ const getPPGForPosition = (pos: number): number => {
   return 0.75;
 };
 
+function initTeamPoints(startGW: number): Record<string, number> {
+  const record: Record<string, number> = {};
+  TEAM_NAMES.forEach((team, i) => {
+    record[team] = Math.max(0, Math.floor(getPPGForPosition(i + 1) * (startGW - 1)));
+  });
+  return record;
+}
+
 export const INITIAL_STATE = (
-  mode: CareerMode, 
-  durationIndex: number, 
-  managerName: string = "Gaffer", 
-  userTeam: string = "United FC"
+  mode: CareerMode,
+  durationIndex: number,
+  managerName: string = "Gaffer",
+  userTeam: string = "United FC",
+  isWeeklyChallenge = false,
+  weeklySeed?: number,
 ): GameState => {
   const config = CAREER_MODES[mode].durations[durationIndex];
-  
+
   let startPos = 10;
   if (mode === 'title') startPos = 2;
   else if (mode === 'top4') startPos = 5;
@@ -108,6 +132,10 @@ export const INITIAL_STATE = (
   const id = typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  const teamPoints = initTeamPoints(config.startGW);
+  // Override the user's slot with their actual starting points
+  teamPoints["United FC"] = startingPoints;
 
   return {
     id,
@@ -129,6 +157,11 @@ export const INITIAL_STATE = (
     isSacked: false,
     isSeasonEnd: false,
     history: [],
+    momentum: 50,
+    flags: [],
+    teamPoints,
+    isWeeklyChallenge,
+    weeklySeed,
   };
 };
 
@@ -150,10 +183,28 @@ export function getMatchOdds(aggression: number) {
   return { win, draw, loss };
 }
 
-export function calculateMatchResult(state: GameState): 'win' | 'draw' | 'loss' {
-  const aggressionPenalty = Math.abs(0.5 - state.aggression) * 0.5;
-  const adjustedAggressionFactor = (1 - aggressionPenalty) * 0.20;
-  const winProb = 0.30 + adjustedAggressionFactor + (state.dressingRoom * 0.20);
+/**
+ * Calculate match result using:
+ * - momentum (0–100): last 3 cards' combined impact
+ * - opponent position: higher-ranked opponent = harder
+ * - dressingRoom: squad morale
+ */
+export function calculateMatchResult(
+  state: GameState,
+  opponentPosition?: number
+): 'win' | 'draw' | 'loss' {
+  const momentum = state.momentum ?? 50;
+  // Momentum converts to a ±0.20 swing on win probability
+  const momentumFactor = ((momentum - 50) / 50) * 0.20;
+
+  // Opponent difficulty: pos 1 = hardest (0.95), pos 20 = easiest (0.05)
+  const oppPos = opponentPosition ?? 10;
+  const oppStrength = (21 - oppPos) / 20;    // 0.05 to 1.0
+  const oppPenalty = (oppStrength - 0.5) * 0.20; // -0.10 to +0.10 against the user
+
+  const winProb = Math.max(0.05, Math.min(0.75,
+    0.30 + momentumFactor + (state.dressingRoom * 0.15) - oppPenalty
+  ));
 
   const roll = Math.random();
   if (roll < winProb) return 'win';
@@ -161,52 +212,116 @@ export function calculateMatchResult(state: GameState): 'win' | 'draw' | 'loss' 
   return 'loss';
 }
 
+/**
+ * Simulate all other league fixtures for this gameweek.
+ * Returns updated teamPoints for non-user teams.
+ */
+export function simulateLeagueMatchday(state: GameState): Record<string, number> {
+  const teamPoints = { ...state.teamPoints };
+  // All teams except the user's slot
+  const others = TEAM_NAMES.filter(t => t !== "United FC");
+
+  // Simple shuffle for random pairings
+  const shuffled = [...others];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  for (let i = 0; i + 1 < shuffled.length; i += 2) {
+    const home = shuffled[i];
+    const away = shuffled[i + 1];
+    const homePts = teamPoints[home] ?? 0;
+    const awayPts = teamPoints[away] ?? 0;
+    const diff = (homePts - awayPts) / 100; // normalise
+
+    const r = Math.random();
+    const winThreshold = 0.38 + Math.max(-0.15, Math.min(0.15, diff));
+    if (r < winThreshold) {
+      teamPoints[home] += 3;
+    } else if (r < winThreshold + 0.27) {
+      teamPoints[home] += 1;
+      teamPoints[away] += 1;
+    } else {
+      teamPoints[away] += 3;
+    }
+  }
+
+  return teamPoints;
+}
+
+/**
+ * Update momentum after a swipe decision.
+ * impactSum = board + fans + squad delta values
+ */
+export function updateMomentum(currentMomentum: number, impactSum: number): number {
+  // Scale: impactSum range is roughly -60 to +45 → maps to ±15 momentum
+  const delta = Math.round(impactSum * 0.25);
+  return Math.max(0, Math.min(100, currentMomentum + delta));
+}
+
 export function getLeagueTable(state: GameState): LeagueTeam[] {
   const modeConfig = CAREER_MODES[state.mode];
   const config = modeConfig.durations[state.durationIndex];
-  const teams = [
-    "City", "Reds", "London Blue", "North White", "Villa", 
-    "Toffees", "Seagulls", "Eagles", "Wolves", "Hammers",
-    "United FC", "Magpies", "Hornets", "Cherries", "Saints",
-    "Forest", "Foxes", "Bees", "Clarets", "Hatters"
-  ];
-  
-  const displayTeams = teams.map(t => t === "United FC" ? state.userTeam : t);
   const currentGW = (config.startGW - 1) + state.matchesPlayed;
-  
-  return displayTeams.map((team, i) => {
-    const isUser = team === state.userTeam;
-    const teamBasePos = i + 1;
-    let teamPts = Math.floor(getPPGForPosition(teamBasePos) * currentGW);
-    
+
+  return TEAM_NAMES.map((originalName, i) => {
+    const isUser = originalName === "United FC";
+    const displayName = isUser ? state.userTeam : originalName;
+
+    let teamPts: number;
     if (isUser) {
       teamPts = state.points;
+    } else if (state.teamPoints?.[originalName] !== undefined) {
+      teamPts = state.teamPoints[originalName];
+    } else {
+      teamPts = Math.floor(getPPGForPosition(i + 1) * currentGW);
     }
 
     return {
       pos: i + 1,
-      team: team,
+      team: displayName,
       gp: currentGW,
       pts: teamPts,
-      isUser: isUser
+      isUser,
     };
   }).sort((a, b) => b.pts - a.pts).map((t, i) => ({ ...t, pos: i + 1 }));
 }
 
 export function saveGameLocally(state: GameState) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('tt_save_v7', JSON.stringify(state));
+    localStorage.setItem('tt_save_v8', JSON.stringify(state));
   }
 }
 
 export function loadGameLocally(): GameState | null {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('tt_save_v7');
-    try {
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
+    // Try v8 first, then fall back to v7 (old format) with defaults
+    const saved8 = localStorage.getItem('tt_save_v8');
+    if (saved8) {
+      try {
+        const state = JSON.parse(saved8) as GameState;
+        return migrateState(state);
+      } catch { return null; }
+    }
+    const saved7 = localStorage.getItem('tt_save_v7');
+    if (saved7) {
+      try {
+        const state = JSON.parse(saved7) as GameState;
+        return migrateState(state);
+      } catch { return null; }
     }
   }
   return null;
+}
+
+/** Fill in any missing fields from older save formats */
+function migrateState(state: GameState): GameState {
+  const config = CAREER_MODES[state.mode]?.durations[state.durationIndex];
+  return {
+    ...state,
+    momentum: state.momentum ?? 50,
+    flags: state.flags ?? [],
+    teamPoints: state.teamPoints ?? (config ? initTeamPoints(config.startGW) : {}),
+  };
 }

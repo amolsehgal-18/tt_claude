@@ -5,12 +5,14 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 interface MatchRadarProps {
   userTeam: string;
   opponentTeam: string;
+  opponentPosition?: number;
   result: 'win' | 'draw' | 'loss' | null;
   onComplete: () => void;
   hotTake?: string | null;
   nextOpponent?: string;
+  nextOpponentPosition?: number;
   nextGW?: number;
-  winChance?: number;
+  momentum?: number;
 }
 
 interface Player {
@@ -24,7 +26,13 @@ interface Player {
   baseY: number;
 }
 
-export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake, nextOpponent, nextGW, winChance }: MatchRadarProps) => {
+function momentumColor(m: number): string {
+  if (m >= 65) return '#1E6B3C';
+  if (m >= 40) return '#FBB13C';
+  return '#D81159';
+}
+
+export const MatchRadar = ({ userTeam, opponentTeam, opponentPosition, result, onComplete, hotTake, nextOpponent, nextOpponentPosition, nextGW, momentum }: MatchRadarProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showFinal, setShowFinal] = useState(false);
   const [commentary, setCommentary] = useState("0' Kick-off! The tactical battle begins.");
@@ -339,18 +347,20 @@ export const MatchRadar = ({ userTeam, opponentTeam, result, onComplete, hotTake
             </div>
             {/* Opponent info */}
             <div className="flex-1 min-w-0">
-              <div className="font-code text-[8px] uppercase tracking-[2px] mb-0.5" style={{ color: '#4E5A6E' }}>vs</div>
+              <div className="font-code text-[8px] uppercase tracking-[2px] mb-0.5" style={{ color: '#4E5A6E' }}>
+                vs {nextOpponentPosition ? `(${nextOpponentPosition}th)` : ''}
+              </div>
               <div className="text-[16px] font-headline font-black uppercase text-white leading-none truncate">{nextOpponent}</div>
               <div className="font-code text-[7px] uppercase tracking-wide mt-0.5" style={{ color: '#4E5A6E' }}>{venue}</div>
             </div>
-            {/* Win % */}
-            {winChance !== undefined && (
+            {/* Momentum indicator */}
+            {momentum !== undefined && (
               <div className="flex-shrink-0 text-center">
-                <div className="text-[20px] font-headline font-black leading-none"
-                  style={{ color: winChance >= 55 ? '#1E6B3C' : winChance >= 40 ? '#FBB13C' : '#D81159' }}>
-                  {winChance}%
+                <div className="text-[18px] font-headline font-black leading-none"
+                  style={{ color: momentumColor(momentum) }}>
+                  {momentum}
                 </div>
-                <div className="font-code text-[7px] uppercase tracking-wider mt-0.5" style={{ color: '#4E5A6E' }}>Win</div>
+                <div className="font-code text-[7px] uppercase tracking-wider mt-0.5" style={{ color: '#4E5A6E' }}>MTM</div>
               </div>
             )}
           </div>

@@ -1,9 +1,123 @@
 /**
  * GET  /api/news  — static fallback headlines
- * POST /api/news  — AI-generated contextual headlines based on current game state
+ * POST /api/news  — context-aware template headlines (no AI)
+ * Template engine: fast, free, zero latency.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Contextual template blocks — {team} and {manager} are filled at runtime
+const BOARD_STABLE = [
+  "EXCLUSIVE: Board back manager ahead of crucial run-in — no sacking imminent",
+  "SOURCES: Chairman reaffirms contract commitment in private meeting",
+  "REVEALED: Club hierarchy satisfied with direction despite mixed results",
+];
+const BOARD_LOW = [
+  "BOMBSHELL: Board growing restless as results fail to materialise — sources",
+  "EXCLUSIVE: Emergency shareholder call held behind closed doors amid pressure",
+  "MELTDOWN: Chairman demands meeting after latest result — sources",
+];
+const BOARD_CRITICAL = [
+  "BREAKING: Board privately discussing managerial options — interview process begun",
+  "CRISIS: Ownership group to hold emergency vote on manager's future — sources",
+  "SHOCK: Club in contact with replacement candidates as board confidence hits zero",
+];
+const FANS_STABLE = [
+  "CROWD: Season ticket renewals up 12% as fans back the club's direction",
+  "POSITIVE: Supporters' trust releases statement backing current management",
+  "POLL: 64% of fans satisfied with manager's approach — survey",
+];
+const FANS_LOW = [
+  "FURIOUS: Supporter groups call for change after run of poor results",
+  "DISCONTENT: Online petition calling for board action reaches 4,000 signatures",
+  "BANNER: Ultras planning visible protest at next home fixture — sources",
+];
+const FANS_CRITICAL = [
+  "CHAOS: Protests at training ground as fans demand immediate action",
+  "WALKOUT: Away-end boycott planned for next fixture — supporter group",
+  "REVOLT: Fan coalition calls for entire board and manager to resign",
+];
+const SQUAD_STABLE = [
+  "TRAINING: Squad spirits high ahead of crucial fixtures — insider",
+  "EXCLUSIVE: Players back the manager's methods, say dressing room sources",
+  "REVEALED: Team-building session boosts squad unity ahead of run-in",
+];
+const SQUAD_LOW = [
+  "LOCKER ROOM: Players frustrated with training ground atmosphere — sources",
+  "STANDOFF: Senior players requesting meeting with board — reports",
+  "HOT MIC: Training ground argument captured by journalist's microphone",
+];
+const SQUAD_CRITICAL = [
+  "MELTDOWN: Multiple players reportedly refuse to attend optional training session",
+  "REVOLT: Dressing room factions emerge as morale reaches crisis point",
+  "EXPOSED: Leaked voice note reveals extent of squad discontent",
+];
+const POSITION_HIGH = [
+  "TITLE RACE: Momentum building as top clubs watch nervously",
+  "FORM: Bookmakers shorten odds for league honours",
+  "EXCLUSIVE: European scouts watching closely after impressive recent run",
+];
+const POSITION_MID = [
+  "FORM GUIDE: A mixed run of results keeps the mid-table picture unclear",
+  "ANALYSIS: Expected Points model suggests current form is unsustainable",
+  "FOCUS: All eyes on the next fixture as the table tightens",
+];
+const POSITION_LOW = [
+  "CRISIS: Relegation battle intensifies as gap to safety narrows",
+  "PRESSURE: Survival odds shorten as form fails to improve — markets",
+  "DRAMA: Drop zone inches closer after another week without three points",
+];
+const GENERIC = [
+  "TRANSFER: Star midfielder linked with summer move — agent talks confirmed",
+  "INJURY: Key player faces scan after training ground knock — sources",
+  "MEDICAL: Club physio department under scrutiny after latest setbacks",
+  "RIVAL: Neighbouring club make approach for backroom staff member",
+  "AGENT: Player's representative spotted at rival ground — speculation mounts",
+  "CONTRACT: Talks between club and key player have stalled — sources",
+  "SCOUTING: Club monitoring three targets ahead of potential window activity",
+  "MEDIA: Manager's post-match comments spark fresh debate — reaction",
+  "DATA: Analytics department flags key concern ahead of next fixture",
+  "EXCLUSIVE: Club considering managerial structure review in the summer",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function buildContextualNews(
+  boardSupport: number,
+  fanSupport: number,
+  dressingRoom: number,
+  position: number,
+): string[] {
+  const items: string[] = [];
+
+  // Board headline
+  if (boardSupport < 0.25) items.push(pick(BOARD_CRITICAL));
+  else if (boardSupport < 0.45) items.push(pick(BOARD_LOW));
+  else items.push(pick(BOARD_STABLE));
+
+  // Fan headline
+  if (fanSupport < 0.25) items.push(pick(FANS_CRITICAL));
+  else if (fanSupport < 0.45) items.push(pick(FANS_LOW));
+  else items.push(pick(FANS_STABLE));
+
+  // Squad headline
+  if (dressingRoom < 0.25) items.push(pick(SQUAD_CRITICAL));
+  else if (dressingRoom < 0.45) items.push(pick(SQUAD_LOW));
+  else items.push(pick(SQUAD_STABLE));
+
+  // Position headline
+  if (position <= 4) items.push(pick(POSITION_HIGH));
+  else if (position <= 12) items.push(pick(POSITION_MID));
+  else items.push(pick(POSITION_LOW));
+
+  // Generic filler
+  const shuffled = [...GENERIC].sort(() => Math.random() - 0.5);
+  items.push(...shuffled.slice(0, 6));
+
+  return items.slice(0, 10);
+}
 
 const STATIC_NEWS = [
   "BOMBSHELL: Guardiola considered walking out on Man City mid-season over transfer betrayal",
@@ -27,81 +141,18 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return NextResponse.json({ items: STATIC_NEWS });
-
-  const { boardSupport, fanSupport, dressingRoom, mode, position, wins, losses, matchesPlayed } =
+  const { boardSupport, fanSupport, dressingRoom, position } =
     await req.json() as {
-      boardSupport:   number;
-      fanSupport:     number;
-      dressingRoom:   number;
-      mode:           string;
-      position:       number;
-      wins:           number;
-      losses:         number;
-      matchesPlayed:  number;
+      boardSupport:  number;
+      fanSupport:    number;
+      dressingRoom:  number;
+      position:      number;
+      mode:          string;
+      wins:          number;
+      losses:        number;
+      matchesPlayed: number;
     };
 
-  const level = (v: number) => v < 0.3 ? 'CRITICAL' : v < 0.5 ? 'LOW' : v > 0.7 ? 'HIGH' : 'STABLE';
-  const boardLevel  = level(boardSupport);
-  const fanLevel    = level(fanSupport);
-  const squadLevel  = level(dressingRoom);
-
-  const crisisLines = [
-    boardLevel  === 'CRITICAL' ? 'Board crisis is acute — ownership tension, sacking rumours imminent.' : '',
-    boardLevel  === 'LOW'      ? 'Board relations are strained — growing pressure from the hierarchy.' : '',
-    fanLevel    === 'CRITICAL' ? 'Fan protests and walkout threats dominate the headlines.' : '',
-    fanLevel    === 'LOW'      ? 'Supporter discontent is building — banner protests brewing.' : '',
-    squadLevel  === 'CRITICAL' ? 'Dressing room rebellion — players reportedly refusing instructions.' : '',
-    squadLevel  === 'LOW'      ? 'Squad morale fractured — training ground bust-ups reported.' : '',
-  ].filter(Boolean).join(' ');
-
-  const prompt = `Generate 10 explosive football tabloid breaking news headlines for a manager under pressure.
-
-Context:
-- Career mode: ${mode}
-- League position: ${position}th
-- Record after ${matchesPlayed} games: W${wins} L${losses}
-- Board confidence: ${boardLevel} (${Math.round(boardSupport * 100)}%)
-- Fan support: ${fanLevel} (${Math.round(fanSupport * 100)}%)
-- Squad morale: ${squadLevel} (${Math.round(dressingRoom * 100)}%)
-${crisisLines ? `\nCurrent crises: ${crisisLines}` : ''}
-
-Rules for each headline:
-1. Start with an ALL-CAPS dramatic word (BOMBSHELL/EXCLUSIVE/MELTDOWN/CRISIS/CHAOS/HOT MIC/REVEALED/SHOCK/FURIOUS/ULTIMATUM/STANDOFF/BREAKING) followed by a colon
-2. Reference fictional manager names and clubs (not real ones)
-3. Reflect the current crisis context above — make headlines feel relevant
-4. Max 18 words per headline
-
-Return ONLY a JSON array of 10 strings. No other text.`;
-
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type':      'application/json',
-        'x-api-key':         apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model:      'claude-sonnet-4-5',
-        max_tokens: 700,
-        system:     'You generate breaking news ticker headlines for a football manager simulation. Return only a JSON array of strings.',
-        messages:   [{ role: 'user', content: prompt }],
-      }),
-    });
-    if (!res.ok) throw new Error('api error');
-
-    const data = await res.json() as { content: Array<{ text: string }> };
-    const text  = data.content?.[0]?.text?.trim() ?? '[]';
-    const match = text.match(/\[[\s\S]*\]/);
-    if (!match) throw new Error('no array');
-
-    const items = JSON.parse(match[0]) as string[];
-    if (!Array.isArray(items) || items.length < 3) throw new Error('bad data');
-
-    return NextResponse.json({ items });
-  } catch {
-    return NextResponse.json({ items: STATIC_NEWS });
-  }
+  const items = buildContextualNews(boardSupport, fanSupport, dressingRoom, position);
+  return NextResponse.json({ items });
 }

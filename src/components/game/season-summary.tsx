@@ -13,11 +13,14 @@ import type { PsychProfile, Archetype } from '@/lib/psychProfile';
 import { buildVerdictPrompt } from '@/lib/psychProfile';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import type { ManagerReputation } from '@/lib/manager-reputation';
+import { getRatingLabel, getRatingColor, BADGE_LABELS } from '@/lib/manager-reputation';
 
 interface SeasonSummaryProps {
   state:        GameState;
   psychProfile: PsychProfile;
   archetype:    Archetype;
+  reputation?:  ManagerReputation | null;
   onRestart:    () => void;
 }
 
@@ -127,7 +130,7 @@ function TensionCard({ label, value, color }: { label: string; value: number; co
   );
 }
 
-export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: SeasonSummaryProps) => {
+export const SeasonSummary = ({ state, psychProfile, archetype, reputation, onRestart }: SeasonSummaryProps) => {
   const [verdict, setVerdict] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
@@ -281,7 +284,51 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
           </div>
         </div>
 
-        {/* 7 — Buttons */}
+        {/* 7 — Reputation card */}
+        {reputation && (
+          <div className="rounded-xl px-3 py-2.5 space-y-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[8px] uppercase tracking-[0.3em]"
+                  style={{ fontFamily: "'Share Tech Mono',monospace", color: 'rgba(255,255,255,0.28)' }}>
+                  Career Rating
+                </div>
+                <div className="text-[18px] font-black leading-tight"
+                  style={{ fontFamily: "'Barlow Condensed',sans-serif", color: getRatingColor(reputation.rating) }}>
+                  {reputation.rating} · {getRatingLabel(reputation.rating)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[8px] uppercase tracking-[0.3em]"
+                  style={{ fontFamily: "'Share Tech Mono',monospace", color: 'rgba(255,255,255,0.28)' }}>
+                  Seasons
+                </div>
+                <div className="text-[18px] font-black leading-tight"
+                  style={{ fontFamily: "'Barlow Condensed',sans-serif", color: 'rgba(255,255,255,0.6)' }}>
+                  {reputation.totalSeasons}
+                </div>
+              </div>
+            </div>
+            {/* Rating bar */}
+            <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${reputation.rating}%`, background: getRatingColor(reputation.rating) }} />
+            </div>
+            {/* Badges */}
+            {reputation.badges.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {reputation.badges.map(b => (
+                  <span key={b} className="text-[9px] px-1.5 py-0.5 rounded-full"
+                    style={{ background: 'rgba(251,177,60,0.10)', border: '1px solid rgba(251,177,60,0.20)', color: '#FBB13C' }}>
+                    {BADGE_LABELS[b]?.icon} {BADGE_LABELS[b]?.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 8 — Buttons */}
         <div className="space-y-2">
           <button onClick={handleShare} disabled={sharing || loading}
             className="w-full py-2.5 rounded uppercase tracking-widest text-white font-black text-[12px] disabled:opacity-40 transition-opacity"
