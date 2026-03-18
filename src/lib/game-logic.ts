@@ -120,7 +120,8 @@ const getPPGForPosition = (pos: number): number => {
 };
 
 // ── Simulate a single gameweek for non-user teams ────────────────────────────
-// Returns an UPDATED copy of teamPoints after adding that GW's results.
+// Each team gets an independent seeded result based on their league position PPG.
+// No pairing — avoids double-counting and edge-case issues with odd team counts.
 export function simulateGameweek(
   gameId: string,
   gameweek: number,
@@ -129,36 +130,28 @@ export function simulateGameweek(
 ): Record<string, number> {
   const rand = seededRand(stringToSeed(`${gameId}-gw${gameweek}`));
   const updated = { ...existingTeamPoints };
-  // Pair teams for 9 fixtures; if odd count play one team twice (edge case)
-  const paired = [...nonUserTeams];
-  while (paired.length % 2 !== 0) paired.push(paired[0]);
 
-  for (let i = 0; i < paired.length; i += 2) {
-    const home = paired[i];
-    const away = paired[i + 1];
-    if (home === away) continue;
-    // Win probability based on current position in table (approximated by PPG)
-    const homePts = updated[home] ?? 0;
-    const awayPts = updated[away] ?? 0;
-    const homeAdvantage = 0.05;
-    const totalPts = homePts + awayPts + 1;
-    const homeWinProb = Math.min(0.70, Math.max(0.15, (homePts / totalPts) + homeAdvantage));
-    const drawProb = 0.25;
+  nonUserTeams.forEach((team, idx) => {
+    // Base position in the full 20-team league (user occupies slot 11)
+    const basePos = idx < 10 ? idx + 1 : idx + 2;
+    const ppg = getPPGForPosition(basePos);
     const roll = rand();
-    if (roll < homeWinProb) {
-      updated[home] = (updated[home] ?? 0) + 3;
-    } else if (roll < homeWinProb + drawProb) {
-      updated[home] = (updated[home] ?? 0) + 1;
-      updated[away] = (updated[away] ?? 0) + 1;
-    } else {
-      updated[away] = (updated[away] ?? 0) + 3;
-    }
-  }
+    let gwPts: number;
+    if      (ppg >= 2.20) gwPts = roll < 0.60 ? 3 : roll < 0.82 ? 1 : 0; // top 2
+    else if (ppg >= 1.95) gwPts = roll < 0.48 ? 3 : roll < 0.73 ? 1 : 0; // 3-4
+    else if (ppg >= 1.70) gwPts = roll < 0.38 ? 3 : roll < 0.65 ? 1 : 0; // 5-6
+    else if (ppg >= 1.35) gwPts = roll < 0.28 ? 3 : roll < 0.56 ? 1 : 0; // 7-10
+    else if (ppg >= 1.05) gwPts = roll < 0.18 ? 3 : roll < 0.48 ? 1 : 0; // 11-17
+    else                  gwPts = roll < 0.10 ? 3 : roll < 0.38 ? 1 : 0; // 18-20
+    updated[team] = (updated[team] ?? 0) + gwPts;
+  });
+
   return updated;
 }
 
-// Pre-seed team points for historical GWs before the user's career starts
-function buildStartingTeamPoints(
+// Build starting team points from scratch using simulation only (no PPG seeding).
+// Called at INITIAL_STATE creation and during migration of old saves.
+export function buildStartingTeamPoints(
   gameId: string,
   userTeam: string,
   startGW: number,
@@ -167,14 +160,7 @@ function buildStartingTeamPoints(
     .map(t => t === 'United FC' ? userTeam : t)
     .filter(t => t !== userTeam);
 
-  // Seed initial points based on base position PPG up to GW 1
   let pts: Record<string, number> = {};
-  for (let i = 0; i < nonUserTeams.length; i++) {
-    const basePos = i < 10 ? i + 1 : i + 2; // skip slot 10 (user)
-    pts[nonUserTeams[i]] = Math.max(0, Math.floor(getPPGForPosition(basePos) * (startGW - 1)));
-  }
-
-  // Apply simulated variance for each historical GW
   for (let gw = 1; gw < startGW; gw++) {
     pts = simulateGameweek(gameId, gw, pts, nonUserTeams);
   }
@@ -381,7 +367,6 @@ export function saveGameLocally(state: GameState) {
 
 export function loadGameLocally(): GameState | null {
   if (typeof window === 'undefined') return null;
-  // Try v8 first, then migrate v7 save
   const raw = localStorage.getItem(SAVE_KEY) ?? localStorage.getItem('tt_save_v7');
   try {
     if (!raw) return null;
@@ -389,8 +374,18 @@ export function loadGameLocally(): GameState | null {
     // Migration guards
     if (!Array.isArray(s.flags))          s.flags          = [];
     if (!Array.isArray(s.momentumBuffer)) s.momentumBuffer = [];
-    if (!s.teamPoints || typeof s.teamPoints !== 'object') s.teamPoints = {};
     if (s.isWeeklyChallenge === undefined) s.isWeeklyChallenge = false;
+    // Rebuild teamPoints if missing, empty, or clearly wrong (old save migration)
+    const config = CAREER_MODES[s.mode]?.durations[s.durationIndex];
+    const totalGW = (config?.startGW ?? 1) - 1 + s.matchesPlayed;
+    const maxTeamPts = s.teamPoints ? Math.max(0, ...Object.values(s.teamPoints)) : 0;
+    const teamPointsCorrupt = !s.teamPoints
+      || typeof s.teamPoints !== 'object'
+      || Object.keys(s.teamPoints).length === 0
+      || (totalGW > 3 && maxTeamPts < totalGW * 0.8); // detect obviously wrong values
+    if (teamPointsCorrupt) {
+      s.teamPoints = buildStartingTeamPoints(s.id, s.userTeam, totalGW + 1);
+    }
     return s;
   } catch {
     return null;
