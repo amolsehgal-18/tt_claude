@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult } from '@/lib/game-logic';
+import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult, simulateGameweek, computeFlags, getMomentumWinChance, ALL_TEAMS } from '@/lib/game-logic';
+import { loadCareerRating, saveCareerRating, applySeasonEnd } from '@/lib/career-rating';
 import { SlantedButton } from './slanted-elements';
 import { ManagerMoodView } from './manager-mood';
 import { MatchRadar } from './match-radar';
@@ -74,8 +75,9 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [setupName, setSetupName]       = useState("Gaffer");
   const [setupTeam, setSetupTeam]       = useState("United FC");
 
-  const isFetchingRef  = useRef(false);
-  const matchGenRef    = useRef(0);
+  const isFetchingRef      = useRef(false);
+  const matchGenRef        = useRef(0);
+  const recentImpactsRef   = useRef<Array<{ board: number; fans: number; squad: number }>>([]);
 
   const { firestore } = useFirestore();
   const { user }      = useUser();
@@ -141,6 +143,17 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     const impact      = side === 'left' ? currentScenario.impactLeft : currentScenario.impactRight;
     const newCardsSeen = state.cardsSeen + 1;
 
+    // ── Momentum buffer: track last 3 card net impacts ────────────────────
+    const netImpact = (impact.board + impact.fans + impact.squad) / 3;
+    const newMomentumBuffer = [...(state.momentumBuffer ?? []), netImpact].slice(-3);
+
+    // ── Consequence flag tracking ─────────────────────────────────────────
+    const recentImpacts = [
+      ...(recentImpactsRef.current),
+      { board: impact.board, fans: impact.fans, squad: impact.squad },
+    ].slice(-3);
+    recentImpactsRef.current = recentImpacts;
+
     const newState: GameState = {
       ...state,
       boardSupport: Math.min(1, Math.max(0, state.boardSupport + (impact.board / 100))),
@@ -148,7 +161,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       dressingRoom: Math.min(1, Math.max(0, state.dressingRoom + (impact.squad / 100))),
       cardsSeen: newCardsSeen,
       history:   [...state.history, currentScenario.scenarioId],
+      momentumBuffer: newMomentumBuffer,
     };
+
+    newState.flags = computeFlags(newState, recentImpacts);
 
     if (newState.boardSupport <= 0.05 || newState.fanSupport <= 0.05) {
       newState.isSacked = true;
@@ -168,12 +184,14 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     if (newCardsSeen > 0 && newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
       const possibleOpponents = table.filter(t => !t.isUser);
-      const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
+      const oppTeam           = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)];
+      const opp               = oppTeam.team;
+      const oppPosition       = oppTeam.pos;
       setOpponentName(opp);
       // Pre-pick next fixture opponent for the result card
       const otherOpps = possibleOpponents.filter(t => t.team !== opp);
       setNextOpponentName(otherOpps.length ? otherOpps[Math.floor(Math.random() * otherOpps.length)].team : opp);
-      const matchResult = calculateMatchResult(newState);
+      const matchResult = calculateMatchResult(newState, oppPosition);
       setPendingResult(matchResult);
       // ── Immediately set a result-correct fallback (prevents stale-API bleed) ──
       matchGenRef.current += 1;
@@ -231,11 +249,13 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     if (newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
       const possibleOpponents = table.filter(t => !t.isUser);
-      const opp               = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)].team;
+      const oppTeam2          = possibleOpponents[Math.floor(Math.random() * possibleOpponents.length)];
+      const opp               = oppTeam2.team;
+      const oppPosition2      = oppTeam2.pos;
       setOpponentName(opp);
       const otherOpps2 = possibleOpponents.filter(t => t.team !== opp);
       setNextOpponentName(otherOpps2.length ? otherOpps2[Math.floor(Math.random() * otherOpps2.length)].team : opp);
-      const matchResult = calculateMatchResult(newState);
+      const matchResult = calculateMatchResult(newState, oppPosition2);
       setPendingResult(matchResult);
       // ── Immediately set a result-correct fallback (prevents stale-API bleed) ──
       matchGenRef.current += 1;
@@ -284,6 +304,11 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         sagaObjective:         CAREER_MODES[state.mode].name,
         objectiveMet:          state.currentLeaguePosition <= activeConfig!.target,
         excludedScenarioIds:   state.history.slice(-50),
+        flags:                 state.flags ?? [],
+        weeklyMode:            state.isWeeklyChallenge,
+        randomSeed:            state.isWeeklyChallenge
+          ? `${state.weekKey}-card${state.cardsSeen}`
+          : undefined,
       });
       setCurrentScenario(result);
     } catch {
@@ -316,6 +341,18 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
     const newMatchesPlayed = state.matchesPlayed + 1;
     const ptsEarned        = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
+
+    // ── Simulate other teams' gameweek ────────────────────────────────────
+    const nonUserTeams = ALL_TEAMS
+      .map(t => t === 'United FC' ? state.userTeam : t)
+      .filter(t => t !== state.userTeam);
+    const updatedTeamPoints = simulateGameweek(
+      state.id,
+      newMatchesPlayed,
+      state.teamPoints ?? {},
+      nonUserTeams,
+    );
+
     const newState: GameState = {
       ...state,
       matchesPlayed: newMatchesPlayed,
@@ -324,6 +361,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       losses:        result === 'loss' ? state.losses + 1 : state.losses,
       points:        state.points + ptsEarned,
       isSeasonEnd:   newMatchesPlayed >= activeConfig.matches,
+      teamPoints:    updatedTeamPoints,
     };
 
     const table = getLeagueTable(newState);
@@ -338,11 +376,25 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     // ── Full psych save on match complete ─────────────────────────────────
     savePsychToFirestore(psychProfile, state.id);
 
-    // ── Derive archetype at season end ────────────────────────────────────
+    // ── Derive archetype + career rating + weekly score at season end ────
     if (newState.isSeasonEnd) {
       const arch = deriveArchetype(psychProfile);
       setSeasonArchetype(arch);
+
+      // Career rating (localStorage)
+      const prevRating = loadCareerRating();
+      const updatedRating = applySeasonEnd(prevRating, {
+        objectiveMet: newState.currentLeaguePosition <= activeConfig.target,
+        isSacked:     newState.isSacked,
+        finalPosition: newState.currentLeaguePosition,
+        targetPosition: activeConfig.target,
+        wins:           newState.wins,
+        matchesPlayed:  newMatchesPlayed,
+      });
+      saveCareerRating(updatedRating);
+
       if (firestore && user) {
+        // Session save (normal + weekly)
         const ref = doc(firestore, 'sessions', `${user.uid}_${state.id}`);
         setDocumentNonBlocking(ref, {
           psychProfile: profileToFirestore(psychProfile),
@@ -353,6 +405,19 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           },
           completedAt: new Date().toISOString(),
         }, { merge: true } as Parameters<typeof setDocumentNonBlocking>[2]);
+
+        // Weekly challenge leaderboard save
+        if (newState.isWeeklyChallenge && newState.weekKey) {
+          const weekRef = doc(firestore, 'weekly_challenges', newState.weekKey, 'scores', user.uid);
+          setDocumentNonBlocking(weekRef, {
+            managerName: newState.managerName,
+            points:      newState.points,
+            archetype:   arch,
+            uid:         user.uid,
+            completedAt: new Date().toISOString(),
+            position:    newState.currentLeaguePosition,
+          }, { merge: false } as Parameters<typeof setDocumentNonBlocking>[2]);
+        }
       }
     }
   }, [state, activeConfig, pendingResult, psychProfile, savePsychToFirestore, firestore, user]);
@@ -379,6 +444,20 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             <div className="space-y-1">
               <h1 className="text-3xl font-headline font-black uppercase italic" style={{ color: '#FBB13C' }}>Gaffer Protocol</h1>
               <p className="text-[9px] font-headline uppercase tracking-[0.4em] opacity-40 font-black">Initialization Stage 01</p>
+              {/* Career rating badge */}
+              {(() => {
+                const cr = loadCareerRating();
+                if (cr.seasons === 0) return null;
+                return (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mt-2"
+                    style={{ background: 'rgba(251,177,60,0.10)', border: '1px solid rgba(251,177,60,0.20)' }}>
+                    <span className="text-[9px] font-code uppercase tracking-[2px]"
+                      style={{ color: '#FBB13C' }}>
+                      Rating {cr.rating} · {cr.seasons} Season{cr.seasons !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="space-y-4">
               <div className="space-y-1 text-left">
@@ -470,7 +549,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   const mood      = calculateMood(state);
   const currentGW = activeConfig ? activeConfig.startGW + state.matchesPlayed : 0;
-  const winChance = Math.round((0.30 + state.boardSupport * 0.20 + state.dressingRoom * 0.20) * 100);
+  // Win chance now reflects momentum + opponent average position
+  const winChance = getMomentumWinChance(state, 10);
 
   return (
     <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto relative overflow-hidden bg-background shadow-2xl border-x border-white/5">
@@ -532,10 +612,28 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         ))}
       </div>
 
-      {/* ── Tension triangle + Manager portrait ── */}
+      {/* ── Tension triangle + Manager portrait + Momentum ── */}
       <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10 h-[104px] flex-shrink-0 overflow-hidden">
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
-        <ManagerMoodView mood={mood} />
+        <div className="flex flex-col items-center gap-2">
+          <ManagerMoodView mood={mood} />
+          {/* Momentum dots */}
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 2].map(i => {
+              const val = (state.momentumBuffer ?? [])[i];
+              const color = val === undefined
+                ? 'rgba(255,255,255,0.12)'
+                : val > 2 ? '#1E6B3C'
+                : val < -2 ? '#D81159'
+                : '#FBB13C';
+              return (
+                <div key={i} className="rounded-full transition-colors duration-300"
+                  style={{ width: 7, height: 7, background: color,
+                    boxShadow: val !== undefined && val > 2 ? '0 0 5px #1E6B3C' : val !== undefined && val < -2 ? '0 0 5px #D81159' : 'none' }} />
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Thin amber divider */}

@@ -8,6 +8,7 @@
 import scenarioData from './scenarios.json';
 import type { AiScenarioPresentationOutput, AiScenarioPresentationInput } from '@/ai/flows/ai-scenario-presentation-flow';
 import type { PsychDelta } from './psychProfile';
+import { seededRand, stringToSeed } from './game-logic';
 
 export type LocalScenario = AiScenarioPresentationOutput & {
   gameCategory: string;
@@ -17,7 +18,7 @@ export type LocalScenario = AiScenarioPresentationOutput & {
 const ALL_SCENARIOS = scenarioData.scenarios as LocalScenario[];
 
 const HISTORY_KEY = 'tt_global_scenario_history';
-const MAX_HISTORY = 600; // covers ~100 games of ~6 scenarios each
+const MAX_HISTORY = 600;
 
 function loadHistory(): Set<string> {
   if (typeof window === 'undefined') return new Set();
@@ -43,17 +44,24 @@ function markSeen(scenarioId: string) {
   saveHistory(history);
 }
 
-export function getLocalScenario(input: AiScenarioPresentationInput): LocalScenario {
-  const globalHistory = loadHistory();
+export function getLocalScenario(
+  input: AiScenarioPresentationInput & {
+    flags?: string[];
+    weeklyMode?: boolean;
+  }
+): LocalScenario {
+  // Weekly challenge: skip global history for fairness (same pool for all players)
+  const globalHistory = input.weeklyMode ? new Set<string>() : loadHistory();
   const excluded = new Set([...globalHistory, ...input.excludedScenarioIds]);
 
   let pool = ALL_SCENARIOS.filter(s => !excluded.has(s.scenarioId));
 
-  // Pool exhausted → reset global history
   if (pool.length === 0) {
-    saveHistory(new Set());
+    if (!input.weeklyMode) saveHistory(new Set());
     pool = ALL_SCENARIOS;
   }
+
+  const flags = input.flags ?? [];
 
   // Contextual weighting: prefer scenarios relevant to current game state
   const weighted = pool.map(s => {
@@ -65,18 +73,38 @@ export function getLocalScenario(input: AiScenarioPresentationInput): LocalScena
     if (dressingRoom < 0.35 && s.gameCategory === 'training') weight += 3;
     if (s.isBreaking) weight += 1;
 
+    // ── Flag-based category boosts ──────────────────────────────────────
+    if (flags.includes('squad_unrest')    && s.gameCategory === 'locker')   weight += 4;
+    if (flags.includes('board_pressure')  && s.gameCategory === 'press')    weight += 4;
+    if (flags.includes('fan_revolt')      && s.gameCategory === 'stadium')  weight += 3;
+    if (flags.includes('fan_revolt')      && s.gameCategory === 'press')    weight += 2;
+    if (flags.includes('hot_streak')      && s.isBreaking)                  weight += 2;
+    if (flags.includes('crisis_mode')     && s.gameCategory === 'press')    weight += 3;
+    if (flags.includes('title_charge')    && s.gameCategory === 'stadium')  weight += 2;
+    if (flags.includes('relegation_zone') && s.gameCategory === 'locker')   weight += 2;
+    if (flags.includes('squad_harmony')   && s.gameCategory === 'training') weight += 2;
+    if (flags.includes('on_the_brink')    && s.gameCategory === 'press')    weight += 3;
+
     return { scenario: s, weight };
   });
 
-  // Weighted random pick
   const totalWeight = weighted.reduce((sum, w) => sum + w.weight, 0);
-  let rand    = Math.random() * totalWeight;
-  let picked  = weighted[0].scenario;
-  for (const { scenario, weight } of weighted) {
-    rand -= weight;
-    if (rand <= 0) { picked = scenario; break; }
+
+  // Weekly mode: deterministic pick using seeded random
+  let randVal: number;
+  if (input.randomSeed) {
+    const seed = stringToSeed(input.randomSeed + totalWeight.toString());
+    randVal = seededRand(seed)() * totalWeight;
+  } else {
+    randVal = Math.random() * totalWeight;
   }
 
-  markSeen(picked.scenarioId);
+  let picked = weighted[0].scenario;
+  for (const { scenario, weight } of weighted) {
+    randVal -= weight;
+    if (randVal <= 0) { picked = scenario; break; }
+  }
+
+  if (!input.weeklyMode) markSeen(picked.scenarioId);
   return picked;
 }
