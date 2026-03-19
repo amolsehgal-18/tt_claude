@@ -871,8 +871,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         ))}
       </div>
 
-      {/* ── Tension triangle + Manager portrait + Momentum ── */}
-      <div className="flex items-center justify-center px-3 pb-0 gap-6 z-10 h-[176px] flex-shrink-0 overflow-hidden">
+      {/* ── Tension triangle + Manager portrait + Momentum (hidden during match sim) ── */}
+      <div className={`flex items-center justify-center px-3 pb-0 gap-6 z-10 h-[176px] flex-shrink-0 overflow-hidden transition-all duration-300 ${isSimulating ? 'hidden' : ''}`}>
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
         <div className="flex flex-col items-center gap-2">
           <ManagerMoodView mood={mood} />
@@ -898,13 +898,13 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         </div>
       </div>
 
-      {/* Thin amber divider */}
-      <div className="mx-3 my-1 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(251,177,60,0.12),transparent)' }} />
+      {/* Thin amber divider — hidden during match sim */}
+      {!isSimulating && <div className="mx-3 my-1 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(251,177,60,0.12),transparent)' }} />}
 
       {/* ── Scenario area ── */}
       <div
-        className={`flex-1 min-h-0 flex flex-col items-center ${showPressConference ? 'justify-start pt-2' : 'justify-end pb-3'} px-1 relative z-[80] ${showPressConference ? 'overflow-y-auto' : 'overflow-hidden'}`}
-        style={showPressConference ? { scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties : undefined}
+        className={`flex-1 min-h-0 flex flex-col items-center ${isSimulating ? 'justify-start overflow-y-auto' : showPressConference ? 'justify-start pt-2 overflow-y-auto' : 'justify-end pb-3 overflow-hidden'} px-1 relative z-[80]`}
+        style={(isSimulating || showPressConference) ? { scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties : undefined}
       >
         {matchIntro && (() => {
           const mb = state.momentumBuffer ?? [];
@@ -985,7 +985,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         )}
       </div>
 
-      {/* ── Win % bar ── */}
+      {/* ── Win % bar (hidden during simulation and press conference) ── */}
       {!isSimulating && !showPressConference && (
         <div
           className="mx-3 mb-1 mt-auto flex items-center gap-3 rounded-[10px] px-3.5 py-[5px] flex-shrink-0 z-[90]"

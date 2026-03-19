@@ -8,12 +8,14 @@ interface SwipeCardProps {
   scenario: AiScenarioPresentationOutput;
   onDecision: (side: 'left' | 'right') => void;
   timeLeft: number;
+  cardsToNextMatch?: number;
+  isConsequence?: boolean;
 }
 
 // Countdown ring: r=12, circumference ≈ 75.4 ≈ 76
 const RING_CIRC = 76;
 
-export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) => {
+export const SwipeCard = ({ scenario, onDecision, timeLeft, cardsToNextMatch, isConsequence }: SwipeCardProps) => {
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
@@ -100,6 +102,16 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
                                   '0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(251,177,60,0.06), inset 0 1px 0 rgba(255,255,255,0.07)',
           }}
         >
+          {/* ── Consequence banner ── */}
+          {isConsequence && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5"
+              style={{ background: 'linear-gradient(90deg,rgba(251,177,60,0.18),rgba(251,177,60,0.04))', borderBottom: '1px solid rgba(251,177,60,0.25)' }}>
+              <span className="text-[9px] font-headline font-black uppercase tracking-[2px]" style={{ color: '#FBB13C' }}>
+                ⚡ CONSEQUENCE — A past decision comes back to haunt you
+              </span>
+            </div>
+          )}
+
           {/* ── Card topbar: BREAKING + countdown ring ── */}
           <div
             className="flex items-center justify-between px-3 py-2"
@@ -129,12 +141,6 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
                   style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
                 />
               </svg>
-              <div
-                className="absolute inset-0 flex items-center justify-center font-code text-[10px] font-bold"
-                style={{ color: timerUrgent ? '#D81159' : '#FBB13C' }}
-              >
-                {timeLeft}
-              </div>
             </div>
           </div>
 
@@ -175,6 +181,18 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft }: SwipeCardProps) =>
                 </span>
               )}
             </div>
+
+            {/* Card counter to next match */}
+            {cardsToNextMatch !== undefined && cardsToNextMatch > 0 && (
+              <div className="flex items-center gap-1 mt-2">
+                <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.05)' }} />
+                <span className="text-[8px] font-code uppercase tracking-[2px]"
+                  style={{ color: cardsToNextMatch === 1 ? '#D81159' : 'rgba(255,255,255,0.22)' }}>
+                  {cardsToNextMatch === 1 ? '⚡ NEXT CARD = MATCHDAY' : `${cardsToNextMatch} cards to matchday`}
+                </span>
+                <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.05)' }} />
+              </div>
+            )}
 
             {/* Option cards — amber glow on active swipe, dim idle */}
             <div className="grid grid-cols-2 gap-2 mt-2">
