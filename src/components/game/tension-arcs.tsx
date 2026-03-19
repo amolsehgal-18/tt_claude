@@ -75,15 +75,26 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
     currentPtsRef.current = pts;
   };
 
-  // Expand + fade pulse ring on a single vertex
-  const pulseVertex = (el: SVGCircleElement) => {
+  // Expand + fade pulse ring on a single vertex — dramatic flash
+  const pulseVertex = (el: SVGCircleElement, dotEl?: SVGCircleElement | null) => {
     const startTime = performance.now();
+    const origR = dotEl ? '3' : '1.75';
     const pframe = (now: number) => {
-      const t = Math.min((now - startTime) / 500, 1);
-      el.setAttribute('r',       String(1.75 + t * 10));
-      el.setAttribute('opacity', String(0.9 * (1 - t)));
+      const t = Math.min((now - startTime) / 900, 1);
+      // Ring expands wide and fades
+      el.setAttribute('r',            String(3 + t * 34));
+      el.setAttribute('opacity',      String(1.2 * (1 - t)));
+      el.setAttribute('stroke-width', String(3 - t * 1.5));
+      // Dot flashes bright then returns
+      if (dotEl) {
+        const flash = t < 0.15 ? 1 : Math.max(0, 1 - (t - 0.15) / 0.35);
+        dotEl.setAttribute('r', String(parseFloat(origR) + flash * 2.5));
+      }
       if (t < 1) requestAnimationFrame(pframe);
-      else        el.setAttribute('opacity', '0');
+      else {
+        el.setAttribute('opacity', '0');
+        if (dotEl) dotEl.setAttribute('r', origR);
+      }
     };
     requestAnimationFrame(pframe);
   };
@@ -93,11 +104,22 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
     const fromPts = currentPtsRef.current;
     const prev    = prevRef.current;
 
-    // Collect which vertices changed so we can pulse them
-    const changed: SVGCircleElement[] = [];
-    if (Math.abs(board    - prev.board)    > 0.001 && pulseBoardRef.current) changed.push(pulseBoardRef.current);
-    if (Math.abs(fans     - prev.fans)     > 0.001 && pulseFansRef.current)  changed.push(pulseFansRef.current);
-    if (Math.abs(dressing - prev.dressing) > 0.001 && pulseSquadRef.current) changed.push(pulseSquadRef.current);
+    // Only pulse the vertex that changed the most
+    const deltas = [
+      { el: pulseBoardRef.current, delta: Math.abs(board    - prev.board)    },
+      { el: pulseFansRef.current,  delta: Math.abs(fans     - prev.fans)     },
+      { el: pulseSquadRef.current, delta: Math.abs(dressing - prev.dressing) },
+    ];
+    const biggest = deltas.reduce((a, b) => b.delta > a.delta ? b : a);
+    // Map pulse ring to its corresponding vertex dot for the flash effect
+    const dotMap: Record<number, SVGCircleElement | null> = {
+      0: dotBoardRef.current,
+      1: dotFansRef.current,
+      2: dotSquadRef.current,
+    };
+    const biggestIdx = deltas.indexOf(biggest);
+    const changed: Array<[SVGCircleElement, SVGCircleElement | null]> =
+      (biggest.delta > 0.001 && biggest.el) ? [[biggest.el, dotMap[biggestIdx]]] : [];
     prevRef.current = { board, fans, dressing };
 
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -116,7 +138,7 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
       else        applyPoints(toPts);
     };
     rafRef.current = requestAnimationFrame(frame);
-    changed.forEach(el => pulseVertex(el));
+    changed.forEach(([ring, dot]) => pulseVertex(ring, dot));
 
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [board, fans, dressing]);
@@ -126,8 +148,8 @@ export const TensionArcs = ({ board, fans, dressing }: TensionArcsProps) => {
   const initPoly = `${init.board.x},${init.board.y} ${init.fans.x},${init.fans.y} ${init.squad.x},${init.squad.y}`;
 
   return (
-    <div style={{ flexShrink: 0, width: 110 }}>
-      <svg viewBox="0 0 120 108" width={110} height={99} fill="none" overflow="visible" style={{ display: 'block' }}>
+    <div style={{ flexShrink: 0, width: 168 }}>
+      <svg viewBox="0 0 120 108" width={168} height={152} fill="none" overflow="visible" style={{ display: 'block' }}>
 
         {/* ── Grid ── */}
         <polygon points="60,14 104,94 16,94"  fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="0.8"/>

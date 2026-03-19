@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult, simulateGameweek, computeFlags, getMomentumWinChance, ALL_TEAMS } from '@/lib/game-logic';
+import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult, simulateGameweek, computeFlags, getMomentumWinChance, ALL_TEAMS, loadManagerProfile, saveManagerProfile, isNameLocked, nameLockDaysRemaining, ManagerProfile } from '@/lib/game-logic';
 import { loadCareerRating, saveCareerRating, applySeasonEnd } from '@/lib/career-rating';
 import { SlantedButton } from './slanted-elements';
 import { ManagerMoodView } from './manager-mood';
@@ -18,7 +18,8 @@ import {
   profileToFirestore,
 } from '@/lib/psychProfile';
 import type { PsychProfile, Archetype } from '@/lib/psychProfile';
-import { AlertTriangle, Zap, ArrowRight } from 'lucide-react';
+import { AlertTriangle, Zap, ArrowRight, VolumeX, Volume2 } from 'lucide-react';
+import { getSoundManager } from '@/lib/sound-manager';
 import { PressConferenceCard, getRandomPressQuestion } from './press-conference-card';
 import type { PressConferenceResult } from './press-conference-card';
 import { cn } from '@/lib/utils';
@@ -69,15 +70,49 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [nextOpponentName, setNextOpponentName] = useState<string>('');
 
   // ── Setup wizard ──────────────────────────────────────────────────────────
-  const [setupStep, setSetupStep]       = useState(0);
-  const [setupMode, setSetupMode]       = useState<CareerMode>('season');
+  const [setupStep, setSetupStep]         = useState(0);
+  const [setupMode, setSetupMode]         = useState<CareerMode>('season');
   const [setupDuration, setSetupDuration] = useState(0);
-  const [setupName, setSetupName]       = useState("Gaffer");
-  const [setupTeam, setSetupTeam]       = useState("United FC");
+  const [setupName, setSetupName]         = useState("Gaffer");
+  const [setupTeam, setSetupTeam]         = useState("United FC");
+  const [managerProfile, setManagerProfile] = useState<ManagerProfile | null>(null);
+
+  // ── New retention & UX states ────────────────────────────────────────────
+  const [sackingPhase, setSackingPhase]   = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [psychTeaserText, setPsychTeaserText] = useState<string | null>(null);
+  const [muteOn, setMuteOn]               = useState(false);
 
   const isFetchingRef      = useRef(false);
   const matchGenRef        = useRef(0);
   const recentImpactsRef   = useRef<Array<{ board: number; fans: number; squad: number }>>([]);
+
+  // ── Sacking sequence auto-advance ────────────────────────────────────────
+  useEffect(() => {
+    if (!state?.isSacked || sackingPhase !== 0) return;
+    // Start the sequence
+    getSoundManager().playDramaticSting();
+    setSackingPhase(1);
+    const t1 = setTimeout(() => setSackingPhase(2), 2600);
+    const t2 = setTimeout(() => {
+      getSoundManager().playCameraFlash();
+      setSackingPhase(3);
+    }, 5200);
+    const t3 = setTimeout(() => setSackingPhase(4), 7800);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.isSacked]);
+
+  // ── Load manager profile on mount — skip name step if returning manager ───
+  useEffect(() => {
+    const profile = loadManagerProfile();
+    if (profile) {
+      setManagerProfile(profile);
+      setSetupName(profile.name);
+      setSetupTeam(profile.team);
+      if (!initialState) setSetupStep(1); // skip name entry for returning managers
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { firestore } = useFirestore();
   const { user }      = useUser();
@@ -140,6 +175,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const handleDecision = useCallback((side: 'left' | 'right') => {
     if (!currentScenario || !state) return;
 
+    // ── Sound: card flip ──────────────────────────────────────────────────
+    getSoundManager().unlock();
+    getSoundManager().playCardFlip();
+
     const impact      = side === 'left' ? currentScenario.impactLeft : currentScenario.impactRight;
     const newCardsSeen = state.cardsSeen + 1;
 
@@ -181,6 +220,16 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setCurrentScenario(null);
     setTimeLeft(15);
 
+    // ── Psych teaser milestones ────────────────────────────────────────────
+    if (newCardsSeen === 6) {
+      const trendArch = deriveArchetype(updatedProfile);
+      setPsychTeaserText(`Your profile is forming… trending toward ${trendArch}`);
+      setTimeout(() => setPsychTeaserText(null), 3500);
+    } else if (newCardsSeen === 15) {
+      setPsychTeaserText('Your fingerprint is sharpening. Full reveal at season end.');
+      setTimeout(() => setPsychTeaserText(null), 3500);
+    }
+
     if (newCardsSeen > 0 && newCardsSeen % 3 === 0) {
       const table             = getLeagueTable(newState);
       const possibleOpponents = table.filter(t => !t.isUser);
@@ -198,6 +247,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       const thisGen1 = matchGenRef.current;
       const pool1 = CLIENT_FALLBACKS[matchResult];
       setMatchHotTake(pool1[Math.floor(Math.random() * pool1.length)]);
+      getSoundManager().playMatchIntro();
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
 
@@ -262,6 +312,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       const thisGen2 = matchGenRef.current;
       const pool2 = CLIENT_FALLBACKS[matchResult];
       setMatchHotTake(pool2[Math.floor(Math.random() * pool2.length)]);
+      getSoundManager().playMatchIntro();
       setMatchIntro(true);
       setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
       // ── Fire hot take fetch — only apply if still the current match ──
@@ -338,6 +389,11 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setNextOpponentName('');
     const result = pendingResult;
     setPendingResult(null);
+
+    // ── Result sounds ─────────────────────────────────────────────────────
+    if (result === 'win')       getSoundManager().playCrowdCheer();
+    else if (result === 'loss') getSoundManager().playCrowdGroan();
+    else                        getSoundManager().playDrawSound();
 
     const newMatchesPlayed = state.matchesPlayed + 1;
     const ptsEarned        = result === 'win' ? 3 : result === 'draw' ? 1 : 0;
@@ -439,47 +495,65 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto bg-background p-6 items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 40% at 50% 100%, rgba(251,177,60,0.08) 0%, transparent 70%)' }} />
 
-        {setupStep === 0 && (
-          <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center z-50">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-headline font-black uppercase italic" style={{ color: '#FBB13C' }}>Gaffer Protocol</h1>
-              <p className="text-[9px] font-headline uppercase tracking-[0.4em] opacity-40 font-black">Initialization Stage 01</p>
-              {/* Career rating badge */}
-              {(() => {
-                const cr = loadCareerRating();
-                if (cr.seasons === 0) return null;
-                return (
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mt-2"
-                    style={{ background: 'rgba(251,177,60,0.10)', border: '1px solid rgba(251,177,60,0.20)' }}>
-                    <span className="text-[9px] font-code uppercase tracking-[2px]"
-                      style={{ color: '#FBB13C' }}>
-                      Rating {cr.rating} · {cr.seasons} Season{cr.seasons !== 1 ? 's' : ''}
-                    </span>
+        {setupStep === 0 && (() => {
+          const locked = isNameLocked(managerProfile);
+          const daysLeft = nameLockDaysRemaining(managerProfile);
+          return (
+            <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 text-center z-50">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-headline font-black uppercase italic" style={{ color: '#FBB13C' }}>Gaffer Protocol</h1>
+                <p className="text-[9px] font-headline uppercase tracking-[0.4em] opacity-40 font-black">Initialization Stage 01</p>
+                {(() => {
+                  const cr = loadCareerRating();
+                  if (cr.seasons === 0) return null;
+                  return (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full mt-2"
+                      style={{ background: 'rgba(251,177,60,0.10)', border: '1px solid rgba(251,177,60,0.20)' }}>
+                      <span className="text-[9px] font-code uppercase tracking-[2px]" style={{ color: '#FBB13C' }}>
+                        Rating {cr.rating} · {cr.seasons} Season{cr.seasons !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest">Manager Name</label>
+                    {locked && <span className="text-[8px] font-code" style={{ color: '#FBB13C' }}>Locked · {daysLeft}d remaining</span>}
                   </div>
-                );
-              })()}
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-1 text-left">
-                <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest px-1">Manager Name</label>
-                <Input value={setupName} onChange={(e) => setSetupName(e.target.value)} className="bg-white/5 h-11 border-white/10 font-bold text-sm" />
+                  <Input
+                    value={setupName}
+                    onChange={(e) => { if (!locked) setSetupName(e.target.value); }}
+                    readOnly={locked}
+                    className={cn("bg-white/5 h-11 border-white/10 font-bold text-sm", locked && "opacity-50 cursor-not-allowed")}
+                  />
+                </div>
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest px-1">Club Identity</label>
+                  <Input value={setupTeam} onChange={(e) => setSetupTeam(e.target.value)} className="bg-white/5 h-11 border-white/10 font-bold text-sm" />
+                </div>
+                <SlantedButton onClick={() => setSetupStep(1)} className="w-full py-4 bg-white text-black font-black uppercase text-xs tracking-widest mt-2">
+                  Next: Choose Challenge
+                </SlantedButton>
               </div>
-              <div className="space-y-1 text-left">
-                <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest px-1">Club Identity</label>
-                <Input value={setupTeam} onChange={(e) => setSetupTeam(e.target.value)} className="bg-white/5 h-11 border-white/10 font-bold text-sm" />
-              </div>
-              <SlantedButton onClick={() => setSetupStep(1)} className="w-full py-4 bg-white text-black font-black uppercase text-xs tracking-widest mt-2">
-                Next: Choose Challenge
-              </SlantedButton>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {setupStep === 1 && (
           <div className="w-full space-y-5 animate-in fade-in slide-in-from-right-4 duration-500 z-50">
             <div className="text-center space-y-1">
               <h2 className="text-2xl font-headline font-black uppercase italic" style={{ color: '#3b82f6' }}>The Mission</h2>
               <p className="text-[9px] font-headline uppercase tracking-[0.3em] opacity-40 font-black">Stage 02: Objectives</p>
+              {/* Manager identity chip */}
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className="text-[10px] font-headline font-black uppercase text-white opacity-60">{setupName} · {setupTeam}</span>
+                <button onClick={() => setSetupStep(0)} className="text-[8px] font-code uppercase tracking-wide hover:opacity-100 transition-opacity"
+                  style={{ color: '#FBB13C', opacity: 0.7 }}>
+                  {isNameLocked(managerProfile) ? `Change (${nameLockDaysRemaining(managerProfile)}d)` : 'Change'}
+                </button>
+              </div>
             </div>
             <div className="grid gap-2">
               {(Object.keys(CAREER_MODES) as CareerMode[]).map((mode) => (
@@ -490,7 +564,6 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
                 </button>
               ))}
             </div>
-            <button onClick={() => setSetupStep(0)} className="text-[9px] font-headline uppercase opacity-40 mx-auto block hover:opacity-100 font-black tracking-widest">Back to Identity</button>
           </div>
         )}
 
@@ -513,7 +586,19 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             <div className="space-y-4">
               <SlantedButton
                 onClick={() => {
-                  const s = INITIAL_STATE(setupMode, setupDuration, setupName, setupTeam);
+                  const name = setupName.trim() || 'Gaffer';
+                  const team = setupTeam.trim() || 'United FC';
+                  // Save manager profile — only update nameChangedAt if name actually changed
+                  const prevProfile = managerProfile;
+                  const nameActuallyChanged = !prevProfile || prevProfile.name !== name;
+                  const newProfile: ManagerProfile = {
+                    name,
+                    team,
+                    nameChangedAt: nameActuallyChanged ? Date.now() : (prevProfile?.nameChangedAt ?? Date.now()),
+                  };
+                  saveManagerProfile(newProfile);
+                  setManagerProfile(newProfile);
+                  const s = INITIAL_STATE(setupMode, setupDuration, name, team);
                   setState(s);
                   setPsychProfile(createInitialProfile());
                   setSeasonArchetype(null);
@@ -530,8 +615,97 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     );
   }
 
+  // ── Sacking cinematic (phases 1-3) ───────────────────────────────────────
+  if (state.isSacked && sackingPhase >= 1 && sackingPhase <= 3) {
+    const SACKING_STATEMENTS = [
+      `${state.userTeam} would like to thank ${state.managerName} for their contribution and wish them well in their next endeavour.`,
+      `The board have made the difficult decision to relieve ${state.managerName} of their duties with immediate effect.`,
+      `After careful consideration, ${state.userTeam} and ${state.managerName} have agreed to part ways.`,
+      `${state.userTeam} can confirm that ${state.managerName} is no longer the club's manager.`,
+    ];
+    const SACKING_REACTIONS = [
+      '"Good riddance tbh" — fan account',
+      '"We deserved better than this." — supporter',
+      '"Who?" — someone on social media',
+      '"Sack the board too." — ultras statement',
+      '"It was only a matter of time." — former player',
+    ];
+    const statement = SACKING_STATEMENTS[Math.floor((state.wins + state.losses) % SACKING_STATEMENTS.length)];
+    const reaction  = SACKING_REACTIONS[Math.floor(state.matchesPlayed % SACKING_REACTIONS.length)];
+
+    return (
+      <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto items-center justify-center relative overflow-hidden"
+        style={{ background: '#07090F' }}>
+
+        {/* Phase 1 — The Call */}
+        {sackingPhase === 1 && (
+          <div className="text-center space-y-6 px-8 animate-in fade-in duration-500">
+            <div className="text-[64px] animate-bounce">📱</div>
+            <div className="space-y-2">
+              <div className="text-[11px] font-code uppercase tracking-[4px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Incoming call</div>
+              <div className="text-2xl font-headline font-black uppercase italic text-white">The Chairman</div>
+            </div>
+            <div className="flex items-center justify-center gap-1.5">
+              {[0,1,2].map(i => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: '#D81159', animationDelay: `${i*0.15}s` }} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Phase 2 — The Statement (with camera flash effect) */}
+        {sackingPhase === 2 && (
+          <div className="text-center space-y-5 px-6 animate-in fade-in duration-300">
+            {/* White flash */}
+            <div className="absolute inset-0 pointer-events-none animate-out fade-out duration-600 z-50"
+              style={{ background: 'rgba(255,255,255,0.15)' }} />
+            <div className="text-[48px]">📋</div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-code uppercase tracking-[4px] mb-3" style={{ color: '#D81159' }}>
+                Official Statement
+              </div>
+              <div className="text-3xl font-headline font-black uppercase italic" style={{ color: '#D81159', letterSpacing: '-1px' }}>
+                SACKED
+              </div>
+              <p className="text-[12px] italic leading-relaxed"
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.5)' }}>
+                &ldquo;{statement}&rdquo;
+              </p>
+            </div>
+            <div className="text-[10px] font-code" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              {reaction}
+            </div>
+          </div>
+        )}
+
+        {/* Phase 3 — The Walk */}
+        {sackingPhase === 3 && (
+          <div className="text-center space-y-5 px-6 animate-in fade-in duration-500">
+            <div className="text-[48px]">🚗</div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-code uppercase tracking-[3px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {state.userTeam}
+              </div>
+              <div className="font-headline font-black text-white uppercase leading-none" style={{ fontSize: '22px' }}>
+                W{state.wins} D{state.draws} L{state.losses} · {state.matchesPlayed} matches
+              </div>
+              <p className="text-[12px] italic mt-3"
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.35)' }}>
+                &ldquo;The car park was quiet. Nobody came to say goodbye.&rdquo;
+              </p>
+            </div>
+            <div className="text-[9px] font-code uppercase tracking-[3px] animate-pulse"
+              style={{ color: 'rgba(255,255,255,0.2)' }}>
+              What your decisions revealed about you →
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── Season end → cinematic psych summary ─────────────────────────────────
-  if (state.isSeasonEnd || state.isSacked) {
+  if (state.isSeasonEnd || (state.isSacked && sackingPhase >= 4)) {
     const arch = seasonArchetype ?? deriveArchetype(psychProfile);
     return (
       <SeasonSummary
@@ -542,6 +716,16 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           setState(null);
           setPsychProfile(createInitialProfile());
           setSeasonArchetype(null);
+          setSackingPhase(0);
+          const profile = loadManagerProfile();
+          if (profile) {
+            setManagerProfile(profile);
+            setSetupName(profile.name);
+            setSetupTeam(profile.team);
+            setSetupStep(1);
+          } else {
+            setSetupStep(0);
+          }
         }}
       />
     );
@@ -554,6 +738,19 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
   return (
     <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto relative overflow-hidden bg-background shadow-2xl border-x border-white/5">
+
+      {/* ── Psych teaser toast ── */}
+      {psychTeaserText && (
+        <div className="absolute top-16 left-3 right-3 z-[200] animate-in fade-in slide-in-from-top-2 duration-400">
+          <div className="rounded-lg px-3 py-2 flex items-center gap-2"
+            style={{ background: 'rgba(251,177,60,0.14)', border: '1px solid rgba(251,177,60,0.3)', backdropFilter: 'blur(12px)' }}>
+            <span className="text-base">🧠</span>
+            <span className="text-[10px] font-headline font-black uppercase tracking-wide" style={{ color: '#FBB13C' }}>
+              {psychTeaserText}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Header band ── */}
       <div
@@ -578,11 +775,28 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             W{state.wins} D{state.draws} L{state.losses}
           </div>
         </div>
-        <div className="py-1.5 pl-3 pr-5 text-center flex-shrink-0">
-          <div className="font-code text-[7px] uppercase tracking-[2px] text-white">Game Week</div>
-          <div className="text-[24px] font-headline font-black leading-none" style={{ color: '#FBB13C', letterSpacing: '-1px' }}>
-            {currentGW}
+        <div className="py-1.5 pl-3 pr-2 text-center flex-shrink-0 flex items-center gap-2">
+          <div>
+            <div className="font-code text-[7px] uppercase tracking-[2px] text-white">Game Week</div>
+            <div className="text-[24px] font-headline font-black leading-none" style={{ color: '#FBB13C', letterSpacing: '-1px' }}>
+              {currentGW}
+            </div>
           </div>
+          {/* Mute toggle */}
+          <button
+            onClick={() => {
+              const muted = getSoundManager().toggleMute();
+              setMuteOn(muted);
+            }}
+            className="p-1.5 rounded-full transition-opacity hover:opacity-80 flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.10)' }}
+            title={muteOn ? 'Unmute' : 'Mute'}
+          >
+            {muteOn
+              ? <VolumeX className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.35)' }} />
+              : <Volume2 className="w-3 h-3" style={{ color: '#FBB13C' }} />
+            }
+          </button>
         </div>
       </div>
 
@@ -594,8 +808,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             Live Standings
           </div>
         </div>
-        <div className="grid px-3 text-[7px] font-code uppercase tracking-[2px] border-b" style={{ gridTemplateColumns: '22px 1fr 28px 34px', borderColor: 'rgba(255,255,255,0.07)', color: '#4E5A6E' }}>
-          <span/><span/><span className="text-center text-white">G</span><span className="text-right text-white">Pts</span>
+        <div className="grid px-3 py-0.5 text-[7px] font-code uppercase tracking-[2px] border-b text-white" style={{ gridTemplateColumns: '22px 1fr 28px 34px', borderColor: 'rgba(255,255,255,0.07)' }}>
+          <span className="text-center">#</span><span>Club</span><span className="text-center">G</span><span className="text-right">Pts</span>
         </div>
         {windowedLeagueTable.map((team) => (
           <div key={team.team} className="grid items-center px-3 py-[4px] relative" style={{
@@ -613,25 +827,28 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       </div>
 
       {/* ── Tension triangle + Manager portrait + Momentum ── */}
-      <div className="flex items-center justify-center px-3 pb-0 gap-8 z-10 h-[104px] flex-shrink-0 overflow-hidden">
+      <div className="flex items-center justify-center px-3 pb-0 gap-6 z-10 h-[176px] flex-shrink-0 overflow-hidden">
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
         <div className="flex flex-col items-center gap-2">
           <ManagerMoodView mood={mood} />
           {/* Momentum dots */}
-          <div className="flex items-center gap-1.5">
-            {[0, 1, 2].map(i => {
-              const val = (state.momentumBuffer ?? [])[i];
-              const color = val === undefined
-                ? 'rgba(255,255,255,0.12)'
-                : val > 2 ? '#1E6B3C'
-                : val < -2 ? '#D81159'
-                : '#FBB13C';
-              return (
-                <div key={i} className="rounded-full transition-colors duration-300"
-                  style={{ width: 7, height: 7, background: color,
-                    boxShadow: val !== undefined && val > 2 ? '0 0 5px #1E6B3C' : val !== undefined && val < -2 ? '0 0 5px #D81159' : 'none' }} />
-              );
-            })}
+          <div className="flex flex-col items-center gap-1">
+            <div className="text-[6px] font-code uppercase tracking-[2px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Momentum</div>
+            <div className="flex items-center gap-2">
+              {[0, 1, 2].map(i => {
+                const val = (state.momentumBuffer ?? [])[i];
+                const color = val === undefined
+                  ? 'rgba(255,255,255,0.12)'
+                  : val > 2 ? '#1E6B3C'
+                  : val < -2 ? '#D81159'
+                  : '#FBB13C';
+                const glow = val !== undefined && val > 2 ? '0 0 8px #1E6B3C' : val !== undefined && val < -2 ? '0 0 8px #D81159' : 'none';
+                return (
+                  <div key={i} className="rounded-full transition-all duration-300"
+                    style={{ width: 10, height: 10, background: color, boxShadow: glow }} />
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -641,18 +858,45 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
 
       {/* ── Scenario area ── */}
       <div
-        className={`${isSimulating || showPressConference ? 'flex-1 min-h-0' : 'h-[220px] flex-shrink-0'} flex flex-col items-center ${showPressConference ? 'justify-start pt-2' : 'justify-center'} px-1 relative z-[80] ${showPressConference ? 'overflow-y-auto' : 'overflow-hidden'}`}
+        className={`flex-1 min-h-0 flex flex-col items-center ${showPressConference ? 'justify-start pt-2' : 'justify-end pb-3'} px-1 relative z-[80] ${showPressConference ? 'overflow-y-auto' : 'overflow-hidden'}`}
         style={showPressConference ? { scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties : undefined}
       >
-        {matchIntro && (
-          <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center bg-background/95 backdrop-blur-xl animate-in fade-in duration-500">
-            <div className="space-y-2 text-center">
-              <Zap className="w-10 h-10 mx-auto animate-bounce" style={{ color: '#FBB13C' }} />
-              <h2 className="text-4xl font-headline font-black uppercase italic text-white tracking-tighter">MATCHDAY</h2>
-              <div className="text-[10px] font-headline font-black uppercase tracking-[0.4em]" style={{ color: '#FBB13C' }}>Deploying Tactics</div>
+        {matchIntro && (() => {
+          const mb = state.momentumBuffer ?? [];
+          const allGood = mb.length === 3 && mb.every(v => v > 2);
+          const allBad  = mb.length === 3 && mb.every(v => v < -2);
+          const momentumMsg = allGood
+            ? '📈 Momentum Surge — the squad is fired up'
+            : allBad
+            ? '📉 Morale Low — the dressing room is unsettled'
+            : null;
+          return (
+            <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center backdrop-blur-xl animate-in fade-in duration-500"
+              style={{ background: allGood ? 'rgba(30,107,60,0.12)' : allBad ? 'rgba(216,17,89,0.10)' : 'rgba(7,9,15,0.95)' }}>
+              <div className="space-y-3 text-center px-6">
+                <Zap className="w-10 h-10 mx-auto animate-bounce" style={{ color: '#FBB13C' }} />
+                <h2 className="text-4xl font-headline font-black uppercase italic text-white tracking-tighter">MATCHDAY</h2>
+                <div className="text-[10px] font-headline font-black uppercase tracking-[0.4em]" style={{ color: '#FBB13C' }}>
+                  {opponentName ? `vs ${opponentName}` : 'Deploying Tactics'}
+                </div>
+                {momentumMsg && (
+                  <div className="text-[10px] font-headline font-black uppercase tracking-wide animate-in fade-in duration-500"
+                    style={{ color: allGood ? '#1E6B3C' : '#D81159' }}>
+                    {momentumMsg}
+                  </div>
+                )}
+                {/* Momentum dots */}
+                <div className="flex items-center justify-center gap-2 mt-1">
+                  {[0,1,2].map(i => {
+                    const val = mb[i];
+                    const col = val === undefined ? 'rgba(255,255,255,0.12)' : val > 2 ? '#1E6B3C' : val < -2 ? '#D81159' : '#FBB13C';
+                    return <div key={i} className="rounded-full" style={{ width: 10, height: 10, background: col, boxShadow: val !== undefined ? `0 0 8px ${col}` : 'none', transition: 'all 0.3s' }} />;
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
         {isSimulating ? (
           <MatchRadar
             userTeam={state.userTeam}
@@ -678,7 +922,14 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
                 onComplete={handlePressConferenceComplete}
               />
             ) : currentScenario ? (
-              <SwipeCard key={currentScenario.scenarioId} scenario={currentScenario} onDecision={handleDecision} timeLeft={timeLeft} />
+              <SwipeCard
+                key={currentScenario.scenarioId}
+                scenario={currentScenario}
+                onDecision={handleDecision}
+                timeLeft={timeLeft}
+                cardsToNextMatch={3 - (state.cardsSeen % 3)}
+                isConsequence={(state.flags ?? []).some(f => currentScenario.scenarioId.includes(f))}
+              />
             ) : null}
           </div>
         )}
@@ -713,8 +964,11 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
               }}
             />
           </div>
-          <div className="font-code text-[8px] uppercase tracking-wide text-right flex-shrink-0 leading-snug" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Next<br/>Match
+          <div className="font-code text-[8px] uppercase tracking-wide text-right flex-shrink-0 leading-snug">
+            <div className="text-white">Next Match</div>
+            <div style={{ color: winChance >= 55 ? '#1E6B3C' : winChance >= 40 ? '#FBB13C' : '#D81159', fontSize: '7px' }}>
+              {winChance >= 55 ? 'Favourite' : winChance >= 40 ? 'Coin flip' : 'Underdog'}
+            </div>
           </div>
         </div>
       )}
