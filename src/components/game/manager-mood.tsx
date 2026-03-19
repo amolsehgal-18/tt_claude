@@ -9,6 +9,7 @@ const MOOD_STYLES: Record<ManagerMood, { bg: string; color: string; border: stri
   neutral:  { bg: 'rgba(251,177,60,0.12)',  color: '#FBB13C', border: 'rgba(251,177,60,0.35)'  },
   stressed: { bg: 'rgba(143,45,86,0.15)',   color: '#8F2D56', border: 'rgba(143,45,86,0.4)'    },
   angry:    { bg: 'rgba(216,17,89,0.15)',   color: '#D81159', border: 'rgba(216,17,89,0.4)'    },
+  sacked:   { bg: 'rgba(60,60,60,0.15)',    color: '#666',    border: 'rgba(100,100,100,0.3)'   },
 };
 
 export const ManagerMoodView = ({ mood }: { mood: ManagerMood }) => {
@@ -46,7 +47,8 @@ export const ManagerMoodView = ({ mood }: { mood: ManagerMood }) => {
 
       {/* Mood badge — colour matches mood */}
       <div
-        className="text-[9px] font-headline font-black uppercase tracking-[2px] px-2 py-[2px] rounded"
+        key={mood}
+        className="text-[9px] font-headline font-black uppercase tracking-[2px] px-2 py-[2px] rounded animate-in fade-in zoom-in-95 duration-300"
         style={{
           background: badge.bg,
           color: badge.color,

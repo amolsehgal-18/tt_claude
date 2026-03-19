@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult, simulateGameweek, computeFlags, getMomentumWinChance, ALL_TEAMS, loadManagerProfile, saveManagerProfile, isNameLocked, nameLockDaysRemaining, ManagerProfile } from '@/lib/game-logic';
+import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult, simulateGameweek, computeFlags, getMomentumWinChance, ALL_TEAMS, loadManagerProfile, saveManagerProfile, isNameLocked, nameLockDaysRemaining, ManagerProfile, LastDecision, getMatchVerdict } from '@/lib/game-logic';
 import { loadCareerRating, saveCareerRating, applySeasonEnd } from '@/lib/career-rating';
 import { SlantedButton } from './slanted-elements';
 import { ManagerMoodView } from './manager-mood';
@@ -68,6 +68,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [showPressConference, setShowPressConference] = useState(false);
   const [pressQuestion, setPressQuestion]       = useState('');
   const [nextOpponentName, setNextOpponentName] = useState<string>('');
+  const [matchVerdict, setMatchVerdict]           = useState<string>('');
+  const [lastDecisionsForMatch, setLastDecisionsForMatch] = useState<LastDecision[]>([]);
+  const lastDecisionsRef = useRef<LastDecision[]>([]);
+  const [matchIntroFading, setMatchIntroFading]   = useState(false);
 
   // ── Setup wizard ──────────────────────────────────────────────────────────
   const [setupStep, setSetupStep]         = useState(0);
@@ -193,6 +197,22 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     ].slice(-3);
     recentImpactsRef.current = recentImpacts;
 
+    // Track this decision for match result breakdown
+    const newDecision: LastDecision = {
+      scenario: currentScenario.scenario,
+      chosenOption: side === 'left' ? currentScenario.leftOption : currentScenario.rightOption,
+      impact: { board: impact.board, fans: impact.fans, squad: impact.squad },
+    };
+    lastDecisionsRef.current = [...lastDecisionsRef.current, newDecision].slice(-3);
+
+    // Play distinct impact sound for the stat hit hardest
+    const absB = Math.abs(impact.board), absF = Math.abs(impact.fans), absS = Math.abs(impact.squad);
+    if (Math.max(absB, absF, absS) > 3) {
+      if (absB >= absF && absB >= absS) getSoundManager().playBoardImpact(impact.board > 0);
+      else if (absF >= absB && absF >= absS) getSoundManager().playFansImpact(impact.fans > 0);
+      else getSoundManager().playSquadImpact(impact.squad > 0);
+    }
+
     const newState: GameState = {
       ...state,
       boardSupport: Math.min(1, Math.max(0, state.boardSupport + (impact.board / 100))),
@@ -247,9 +267,19 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       const thisGen1 = matchGenRef.current;
       const pool1 = CLIENT_FALLBACKS[matchResult];
       setMatchHotTake(pool1[Math.floor(Math.random() * pool1.length)]);
+      // Compute verdict + snapshot decisions for this match
+      const verdict = getMatchVerdict(matchResult, newState, lastDecisionsRef.current);
+      setMatchVerdict(verdict);
+      setLastDecisionsForMatch([...lastDecisionsRef.current]);
+      lastDecisionsRef.current = [];
+
       getSoundManager().playMatchIntro();
       setMatchIntro(true);
-      setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
+      setMatchIntroFading(false);
+      setTimeout(() => {
+        setMatchIntroFading(true);
+        setTimeout(() => { setMatchIntro(false); setMatchIntroFading(false); setIsSimulating(true); }, 350);
+      }, 1500);
 
       // ── Fire hot take fetch — only apply if still the current match ──
       fetch('/api/match-take', {
@@ -312,9 +342,18 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       const thisGen2 = matchGenRef.current;
       const pool2 = CLIENT_FALLBACKS[matchResult];
       setMatchHotTake(pool2[Math.floor(Math.random() * pool2.length)]);
+      const verdictPc = getMatchVerdict(matchResult, newState, lastDecisionsRef.current);
+      setMatchVerdict(verdictPc);
+      setLastDecisionsForMatch([...lastDecisionsRef.current]);
+      lastDecisionsRef.current = [];
+
       getSoundManager().playMatchIntro();
       setMatchIntro(true);
-      setTimeout(() => { setMatchIntro(false); setIsSimulating(true); }, 2000);
+      setMatchIntroFading(false);
+      setTimeout(() => {
+        setMatchIntroFading(true);
+        setTimeout(() => { setMatchIntro(false); setMatchIntroFading(false); setIsSimulating(true); }, 350);
+      }, 1500);
       // ── Fire hot take fetch — only apply if still the current match ──
       fetch('/api/match-take', {
         method:  'POST',
@@ -477,6 +516,12 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
       }
     }
   }, [state, activeConfig, pendingResult, psychProfile, savePsychToFirestore, firestore, user]);
+
+  // ── VAR use ───────────────────────────────────────────────────────────────
+  const handleVARUse = useCallback((newResult: 'win' | 'draw') => {
+    setPendingResult(newResult);
+    setState(prev => prev ? { ...prev, varCardsLeft: Math.max(0, (prev.varCardsLeft ?? 1) - 1) } : prev);
+  }, []);
 
   // ── League table windowing ────────────────────────────────────────────────
   const windowedLeagueTable = useMemo(() => {
@@ -871,7 +916,7 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             ? '📉 Morale Low — the dressing room is unsettled'
             : null;
           return (
-            <div className="absolute inset-0 z-[120] flex flex-col items-center justify-center backdrop-blur-xl animate-in fade-in duration-500"
+            <div className={`absolute inset-0 z-[120] flex flex-col items-center justify-center backdrop-blur-xl transition-opacity duration-300 ${matchIntroFading ? 'opacity-0' : 'opacity-100 animate-in fade-in duration-400'}`}
               style={{ background: allGood ? 'rgba(30,107,60,0.12)' : allBad ? 'rgba(216,17,89,0.10)' : 'rgba(7,9,15,0.95)' }}>
               <div className="space-y-3 text-center px-6">
                 <Zap className="w-10 h-10 mx-auto animate-bounce" style={{ color: '#FBB13C' }} />
@@ -907,6 +952,11 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             nextOpponent={nextOpponentName}
             nextGW={currentGW + 1}
             winChance={winChance}
+            verdict={matchVerdict}
+            lastDecisions={lastDecisionsForMatch}
+            varCardsLeft={state.varCardsLeft ?? 0}
+            momentumBuffer={state.momentumBuffer}
+            onVARUse={handleVARUse}
           />
         ) : (
           <div className="w-full flex items-center justify-center relative bg-background">
