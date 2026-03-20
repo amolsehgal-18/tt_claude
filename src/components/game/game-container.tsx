@@ -871,31 +871,10 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         ))}
       </div>
 
-      {/* ── Tension triangle + Manager portrait + Momentum (hidden during match sim) ── */}
-      <div className={`flex items-center justify-center px-3 pb-0 gap-6 z-10 h-[176px] flex-shrink-0 overflow-hidden transition-all duration-300 ${isSimulating ? 'hidden' : ''}`}>
+      {/* ── Tension triangle + Manager portrait (hidden during match sim) ── */}
+      <div className={`flex items-center justify-center px-3 pb-0 gap-6 z-10 h-[152px] flex-shrink-0 overflow-hidden ${isSimulating ? 'hidden' : ''}`}>
         <TensionArcs board={state.boardSupport} fans={state.fanSupport} dressing={state.dressingRoom} />
-        <div className="flex flex-col items-center gap-2">
-          <ManagerMoodView mood={mood} />
-          {/* Momentum dots */}
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-[6px] font-code uppercase tracking-[2px]" style={{ color: 'rgba(255,255,255,0.25)' }}>Momentum</div>
-            <div className="flex items-center gap-2">
-              {[0, 1, 2].map(i => {
-                const val = (state.momentumBuffer ?? [])[i];
-                const color = val === undefined
-                  ? 'rgba(255,255,255,0.12)'
-                  : val > 2 ? '#1E6B3C'
-                  : val < -2 ? '#D81159'
-                  : '#FBB13C';
-                const glow = val !== undefined && val > 2 ? '0 0 8px #1E6B3C' : val !== undefined && val < -2 ? '0 0 8px #D81159' : 'none';
-                return (
-                  <div key={i} className="rounded-full transition-all duration-300"
-                    style={{ width: 10, height: 10, background: color, boxShadow: glow }} />
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <ManagerMoodView mood={mood} timeLeft={timeLeft} />
       </div>
 
       {/* Thin amber divider — hidden during match sim */}

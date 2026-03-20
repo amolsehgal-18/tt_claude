@@ -12,9 +12,6 @@ interface SwipeCardProps {
   isConsequence?: boolean;
 }
 
-// Countdown ring: r=12, circumference ≈ 75.4 ≈ 76
-const RING_CIRC = 76;
-
 export const SwipeCard = ({ scenario, onDecision, timeLeft, cardsToNextMatch, isConsequence }: SwipeCardProps) => {
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -54,10 +51,6 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft, cardsToNextMatch, is
   const swipeAmt     = Math.abs(dragX);
   const isLeft       = dragX < -15;
   const isRight      = dragX > 15;
-
-  // Countdown ring offset: 0 = full circle, RING_CIRC = empty
-  const ringOffset   = RING_CIRC * (1 - (timeLeft / 15));
-  const timerUrgent  = timeLeft <= 5;
 
   return (
     <div
@@ -126,22 +119,6 @@ export const SwipeCard = ({ scenario, onDecision, timeLeft, cardsToNextMatch, is
               BREAKING
             </div>
 
-            {/* Countdown ring */}
-            <div className="relative w-[30px] h-[30px]">
-              <svg width={30} height={30} viewBox="0 0 30 30" style={{ transform: 'rotate(-90deg)', display: 'block' }}>
-                <circle cx={15} cy={15} r={12} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={2.5} />
-                <circle
-                  cx={15} cy={15} r={12}
-                  fill="none"
-                  stroke={timerUrgent ? '#D81159' : '#FBB13C'}
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeDasharray={RING_CIRC}
-                  strokeDashoffset={ringOffset}
-                  style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
-                />
-              </svg>
-            </div>
           </div>
 
           {/* ── Card body ── */}
