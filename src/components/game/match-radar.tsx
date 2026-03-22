@@ -12,6 +12,7 @@ interface MatchRadarProps {
   hotTake?: string | null;
   nextOpponent?: string;
   nextGW?: number;
+  isLastMatch?: boolean;
   winChance?: number;
   verdict?: string;
   lastDecisions?: LastDecision[];
@@ -31,7 +32,7 @@ type VARState = 'idle' | 'available' | 'checking' | 'success' | 'fail';
 
 export const MatchRadar = ({
   userTeam, opponentTeam, result, onComplete, hotTake,
-  nextOpponent, nextGW, winChance, verdict, lastDecisions,
+  nextOpponent, nextGW, isLastMatch, winChance, verdict, lastDecisions,
   varCardsLeft = 0, momentumBuffer = [], onVARUse,
   kitPrimary, kitSecondary,
 }: MatchRadarProps) => {
@@ -40,6 +41,9 @@ export const MatchRadar = ({
   const [commentary, setCommentary]   = useState("0' Kick-off! The tactical battle begins.");
   const [varState, setVarState]       = useState<VARState>('idle');
   const [effectiveResult, setEffectiveResult] = useState(result);
+
+  // Capture initial result so VAR use (which changes the prop) doesn't restart the timer
+  const initialResultRef = useRef(result);
   const stopCrowdRef = useRef<(() => void) | null>(null);
 
   // Start crowd ambience on mount, stop when final card shows
@@ -59,6 +63,8 @@ export const MatchRadar = ({
   }, [effectiveResult]);
 
   const matchEvents = useMemo(() => {
+    // Use initialResultRef so VAR result-flip doesn't recompute/restart commentary
+    const result = initialResultRef.current; // eslint-disable-line react-hooks/exhaustive-deps
     const WIN_PATHS = [
       [{ trigger:0, text:"0' Kick off. Your side looks hungry from the first whistle." },
        { trigger:1.4, text:"28' CHANCE — keeper spills it but scrambles clear." },
@@ -99,85 +105,100 @@ export const MatchRadar = ({
     ];
     const pool = result === 'win' ? WIN_PATHS : result === 'loss' ? LOSS_PATHS : DRAW_PATHS;
     return pool[Math.floor(Math.random() * pool.length)];
-  }, [result]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — commentary is fixed to initial result; VAR flip must not restart it
 
   // Canvas animation
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || showFinal) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width || 300; const height = rect.height || 225;
-    canvas.width = width * dpr; canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-    const mx = 6, my = 6, pw = width - mx*2, ph = height - my*2;
-
-    const userFormation = [[0.08,0.5],[0.22,0.25],[0.22,0.42],[0.22,0.58],[0.22,0.75],[0.42,0.2],[0.42,0.4],[0.42,0.6],[0.42,0.8],[0.65,0.35],[0.65,0.65]];
-    const oppFormation  = [[0.92,0.5],[0.78,0.25],[0.78,0.42],[0.78,0.58],[0.78,0.75],[0.58,0.2],[0.58,0.4],[0.58,0.6],[0.58,0.8],[0.35,0.35],[0.35,0.65]];
-    const players: Player[] = [
-      ...userFormation.map(p => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'user' as const, color: kitPrimary   ?? '#3b82f6', baseX:p[0]*width, baseY:p[1]*height })),
-      ...oppFormation.map(p  => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'opp'  as const, color: kitSecondary ?? '#ef4444', baseX:p[0]*width, baseY:p[1]*height })),
-    ];
-    const ball = { x: width/2, y: height/2, targetPlayerIndex: Math.floor(Math.random()*players.length) };
     let animationFrame: number;
+    let setupFrame: number;
 
-    const drawPitch = () => {
-      ctx.fillStyle = '#1a4a1a'; ctx.fillRect(0,0,width,height);
-      const sw = pw/8;
-      for (let i=0; i<8; i++) { if (i%2===0) { ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.fillRect(mx+i*sw,my,sw,ph); } }
-      ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=1;
-      ctx.strokeRect(mx,my,pw,ph);
-      ctx.beginPath(); ctx.moveTo(mx+pw/2,my); ctx.lineTo(mx+pw/2,my+ph); ctx.stroke();
-      const cr=Math.round(ph*0.12);
-      ctx.beginPath(); ctx.arc(mx+pw/2,my+ph/2,cr,0,Math.PI*2); ctx.stroke();
-      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(mx+pw/2,my+ph/2,2,0,Math.PI*2); ctx.fill();
-      const paD=Math.round(pw*0.157), paH=Math.round(ph*0.593), paY=my+(ph-paH)/2;
-      ctx.strokeRect(mx,paY,paD,paH); ctx.strokeRect(mx+pw-paD,paY,paD,paH);
-      const gaD=Math.round(pw*0.052), gaH=Math.round(ph*0.269), gaY=my+(ph-gaH)/2;
-      ctx.strokeRect(mx,gaY,gaD,gaH); ctx.strokeRect(mx+pw-gaD,gaY,gaD,gaH);
-      const ps=Math.round(pw*0.105);
-      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(mx+ps,my+ph/2,2,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(mx+pw-ps,my+ph/2,2,0,Math.PI*2); ctx.fill();
-      [[mx,my,0,Math.PI/2],[mx+pw,my,Math.PI/2,Math.PI],[mx,my+ph,Math.PI*1.5,Math.PI*2],[mx+pw,my+ph,Math.PI,Math.PI*1.5]].forEach(([x,y,s,e]) => {
-        ctx.beginPath(); ctx.arc(x as number,y as number,5,s as number,e as number); ctx.stroke();
-      });
-      const gW=Math.round(ph*0.107), gY=my+(ph-gW)/2;
-      ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillRect(0,gY,mx,gW); ctx.fillRect(mx+pw,gY,mx,gW);
-    };
+    setupFrame = requestAnimationFrame(() => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const animate = () => {
-      drawPitch();
-      const target=players[ball.targetPlayerIndex];
-      const dx=target.x-ball.x, dy=target.y-ball.y, dist=Math.sqrt(dx*dx+dy*dy);
-      if (dist<6) {
-        const mates=players.filter((_,i)=>i!==ball.targetPlayerIndex);
-        ball.targetPlayerIndex=players.indexOf(mates[Math.floor(Math.random()*mates.length)]);
-      } else { const sp=Math.min(4,dist*0.12); ball.x+=(dx/dist)*sp; ball.y+=(dy/dist)*sp; }
-      players.forEach((p,idx) => {
-        const dtb=Math.sqrt((ball.x-p.x)**2+(ball.y-p.y)**2);
-        const isT=idx===ball.targetPlayerIndex;
-        const act=Math.max(0.35,1.6-dtb/(width*0.28));
-        p.x+=(p.baseX-p.x)*0.025+(Math.random()-0.5)*1.1*act;
-        p.y+=(p.baseY-p.y)*0.025+(Math.random()-0.5)*1.1*act;
-        if(isT){ p.x+=(ball.x-p.x)*0.025; p.y+=(ball.y-p.y)*0.025; }
-        p.x=Math.max(mx+4,Math.min(mx+pw-4,p.x)); p.y=Math.max(my+4,Math.min(my+ph-4,p.y));
-        ctx.fillStyle=p.color; ctx.shadowBlur=isT?10:0; ctx.shadowColor=p.color;
-        ctx.beginPath(); ctx.arc(p.x,p.y,isT?7:6,0,Math.PI*2); ctx.fill();
-        ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=1; ctx.stroke();
-      });
-      ctx.fillStyle='#facc15'; ctx.shadowBlur=12; ctx.shadowColor='#facc15';
-      ctx.beginPath(); ctx.arc(ball.x,ball.y,4.5,0,Math.PI*2); ctx.fill();
-      ctx.shadowBlur=0; ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1; ctx.stroke();
-      animationFrame=requestAnimationFrame(animate);
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width > 10 ? rect.width : 300;
+      const height = rect.height > 10 ? rect.height : 225;
+      canvas.width = width * dpr; canvas.height = height * dpr;
+      ctx.scale(dpr, dpr);
+      const mx = 6, my = 6, pw = width - mx*2, ph = height - my*2;
+
+      const userFormation = [[0.08,0.5],[0.22,0.25],[0.22,0.42],[0.22,0.58],[0.22,0.75],[0.42,0.2],[0.42,0.4],[0.42,0.6],[0.42,0.8],[0.65,0.35],[0.65,0.65]];
+      const oppFormation  = [[0.92,0.5],[0.78,0.25],[0.78,0.42],[0.78,0.58],[0.78,0.75],[0.58,0.2],[0.58,0.4],[0.58,0.6],[0.58,0.8],[0.35,0.35],[0.35,0.65]];
+      const players: Player[] = [
+        ...userFormation.map(p => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'user' as const, color: kitPrimary   ?? '#3b82f6', baseX:p[0]*width, baseY:p[1]*height })),
+        ...oppFormation.map(p  => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'opp'  as const, color: kitSecondary ?? '#ef4444', baseX:p[0]*width, baseY:p[1]*height })),
+      ];
+      const ball = { x: width/2, y: height/2, targetPlayerIndex: Math.floor(Math.random()*players.length) };
+
+      const drawPitch = () => {
+        ctx.fillStyle = '#1a4a1a'; ctx.fillRect(0,0,width,height);
+        const sw = pw/8;
+        for (let i=0; i<8; i++) { if (i%2===0) { ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.fillRect(mx+i*sw,my,sw,ph); } }
+        ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=1;
+        ctx.strokeRect(mx,my,pw,ph);
+        ctx.beginPath(); ctx.moveTo(mx+pw/2,my); ctx.lineTo(mx+pw/2,my+ph); ctx.stroke();
+        const cr=Math.round(ph*0.12);
+        ctx.beginPath(); ctx.arc(mx+pw/2,my+ph/2,cr,0,Math.PI*2); ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(mx+pw/2,my+ph/2,2,0,Math.PI*2); ctx.fill();
+        const paD=Math.round(pw*0.157), paH=Math.round(ph*0.593), paY=my+(ph-paH)/2;
+        ctx.strokeRect(mx,paY,paD,paH); ctx.strokeRect(mx+pw-paD,paY,paD,paH);
+        const gaD=Math.round(pw*0.052), gaH=Math.round(ph*0.269), gaY=my+(ph-gaH)/2;
+        ctx.strokeRect(mx,gaY,gaD,gaH); ctx.strokeRect(mx+pw-gaD,gaY,gaD,gaH);
+        const ps=Math.round(pw*0.105);
+        ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.beginPath(); ctx.arc(mx+ps,my+ph/2,2,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(mx+pw-ps,my+ph/2,2,0,Math.PI*2); ctx.fill();
+        [[mx,my,0,Math.PI/2],[mx+pw,my,Math.PI/2,Math.PI],[mx,my+ph,Math.PI*1.5,Math.PI*2],[mx+pw,my+ph,Math.PI,Math.PI*1.5]].forEach(([x,y,s,e]) => {
+          ctx.beginPath(); ctx.arc(x as number,y as number,5,s as number,e as number); ctx.stroke();
+        });
+        const gW=Math.round(ph*0.107), gY=my+(ph-gW)/2;
+        ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillRect(0,gY,mx,gW); ctx.fillRect(mx+pw,gY,mx,gW);
+      };
+
+      const animate = () => {
+        drawPitch();
+        const target=players[ball.targetPlayerIndex];
+        const dx=target.x-ball.x, dy=target.y-ball.y, dist=Math.sqrt(dx*dx+dy*dy);
+        if (dist<6) {
+          const mates=players.filter((_,i)=>i!==ball.targetPlayerIndex);
+          ball.targetPlayerIndex=players.indexOf(mates[Math.floor(Math.random()*mates.length)]);
+        } else { const sp=Math.min(4,dist*0.12); ball.x+=(dx/dist)*sp; ball.y+=(dy/dist)*sp; }
+        players.forEach((p,idx) => {
+          const dtb=Math.sqrt((ball.x-p.x)**2+(ball.y-p.y)**2);
+          const isT=idx===ball.targetPlayerIndex;
+          const act=Math.max(0.35,1.6-dtb/(width*0.28));
+          p.x+=(p.baseX-p.x)*0.025+(Math.random()-0.5)*1.1*act;
+          p.y+=(p.baseY-p.y)*0.025+(Math.random()-0.5)*1.1*act;
+          if(isT){ p.x+=(ball.x-p.x)*0.025; p.y+=(ball.y-p.y)*0.025; }
+          p.x=Math.max(mx+4,Math.min(mx+pw-4,p.x)); p.y=Math.max(my+4,Math.min(my+ph-4,p.y));
+          ctx.fillStyle=p.color; ctx.shadowBlur=isT?10:0; ctx.shadowColor=p.color;
+          ctx.beginPath(); ctx.arc(p.x,p.y,isT?7:6,0,Math.PI*2); ctx.fill();
+          ctx.shadowBlur=0; ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=1; ctx.stroke();
+        });
+        ctx.fillStyle='#facc15'; ctx.shadowBlur=12; ctx.shadowColor='#facc15';
+        ctx.beginPath(); ctx.arc(ball.x,ball.y,4.5,0,Math.PI*2); ctx.fill();
+        ctx.shadowBlur=0; ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1; ctx.stroke();
+        animationFrame=requestAnimationFrame(animate);
+      };
+      animate();
+    });
+
+    return () => {
+      cancelAnimationFrame(setupFrame);
+      cancelAnimationFrame(animationFrame);
     };
-    animate();
-    return () => cancelAnimationFrame(animationFrame);
   }, [showFinal]);
 
   // Commentary + VAR window + whistle + final trigger
+  // Ref so timer can read varCardsLeft without it being a dep (prevents restart on VAR use)
+  const varCardsLeftRef = useRef(varCardsLeft);
+  varCardsLeftRef.current = varCardsLeft;
+
   useEffect(() => {
     if (showFinal) return;
     const start = Date.now();
@@ -192,7 +213,8 @@ export const MatchRadar = ({
       setCommentary(currentEvent.text);
 
       // Show VAR button window at 3.0s if losing/drawing and have cards
-      if (!varShown && elapsed >= 3.0 && varCardsLeft > 0 && (result === 'loss' || result === 'draw') && varState === 'idle') {
+      const initRes = initialResultRef.current;
+      if (!varShown && elapsed >= 3.0 && varCardsLeftRef.current > 0 && (initRes === 'loss' || initRes === 'draw') && varState === 'idle') {
         varShown = true;
         setVarState('available');
       }
@@ -202,28 +224,28 @@ export const MatchRadar = ({
         stopCrowdRef.current?.();
         getSoundManager().playFinalWhistle();
       }
-      // Show final at 5s
+      // Show final at 5s — but wait if VAR is mid-review
       if (elapsed >= 5) {
+        if (varStateRef.current === 'checking') return; // hold until VAR resolves
         clearInterval(timer);
         setTimeout(() => setShowFinal(true), 400);
       }
     }, 100);
     return () => clearInterval(timer);
-  }, [showFinal, matchEvents, result, varCardsLeft, varState]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFinal, matchEvents]); // result + varCardsLeft intentionally via refs to avoid timer restart on VAR use
 
-  // VAR use handler
+  const varStateRef = useRef<VARState>('idle');
+  varStateRef.current = varState;
+
   const handleVARClick = () => {
     if (varState !== 'available' || !onVARUse) return;
     setVarState('checking');
     setTimeout(() => {
-      const mb = momentumBuffer.slice(-3);
-      const avgM = mb.length ? mb.reduce((a,b)=>a+b,0)/mb.length : 0;
-      const success = avgM >= 0;
-      getSoundManager().playVARDecision(success);
-      setVarState(success ? 'success' : 'fail');
-      const newResult: 'win' | 'draw' = success ? 'win' : 'draw';
-      setEffectiveResult(newResult);
-      onVARUse(newResult);
+      getSoundManager().playVARDecision(true);
+      setVarState('success');
+      setEffectiveResult('win');
+      onVARUse('win');
     }, 1800);
   };
 
@@ -248,144 +270,146 @@ export const MatchRadar = ({
     };
 
     return (
-      <div className="w-full px-3 flex flex-col gap-2.5 py-2 overflow-y-auto animate-in fade-in zoom-in-95 duration-300">
+      <div className="w-full h-full flex flex-col animate-in fade-in duration-300">
 
-        {/* ── VAR result badge (if used) ── */}
-        {(varState === 'success' || varState === 'fail') && (
-          <div className="rounded-[12px] px-3 py-2 flex items-center gap-2 animate-in fade-in duration-500"
-            style={{ background: varState==='success'?'rgba(30,107,60,0.15)':'rgba(216,17,89,0.12)',
-              border:`1px solid ${varState==='success'?'rgba(30,107,60,0.3)':'rgba(216,17,89,0.3)'}` }}>
-            <span className="text-lg">📺</span>
-            <div>
-              <div className="text-[8px] font-code uppercase tracking-[3px]"
-                style={{ color: varState==='success'?'#1E6B3C':'#D81159' }}>
-                VAR Review — {varState==='success'?'Decision Overturned':'Decision Upheld'}
-              </div>
-              <div className="text-[10px] font-headline font-black uppercase text-white mt-0.5">
-                {varState==='success'?'Goal awarded. Result reversed.':'No clear error found. Original decision stands.'}
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 pt-2 pb-1 flex flex-col gap-1.5" style={{ scrollbarWidth:'none' }}>
+
+          {/* VAR badge */}
+          {varState === 'success' && (
+            <div className="rounded-[10px] px-3 py-1.5 flex items-center gap-2 animate-in fade-in duration-400"
+              style={{ background:'rgba(30,107,60,0.15)', border:'1px solid rgba(30,107,60,0.3)' }}>
+              <span className="text-sm">📺</span>
+              <div>
+                <div className="text-[7px] font-code uppercase tracking-[3px] text-white/50">VAR Review · Decision Overturned</div>
+                <div className="text-[10px] font-headline font-black uppercase text-white">Goal awarded. Result reversed.</div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ── Result card ── */}
-        <div className="rounded-[18px] p-4 text-center relative overflow-hidden"
-          style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)' }}>
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-[3px] rounded-full font-code text-[8px] tracking-[3px] uppercase mb-3"
-            style={{ background:resultBg, border:`1px solid ${resultBorder}`, color:resultColor }}>
-            {resultLabel}
-          </div>
-          <div className="flex items-center justify-center gap-2.5">
-            <div className="text-center">
-              <div className="text-[10px] font-headline font-black uppercase tracking-wide mb-1 text-white/40">{userTeam}</div>
-              <div className="font-headline font-black leading-none text-white" style={{ fontSize:'50px', letterSpacing:'-2px' }}>{score.user}</div>
-            </div>
-            <div className="font-light self-end pb-1 text-white/25" style={{ fontSize:'24px' }}>—</div>
-            <div className="text-center">
-              <div className="text-[10px] font-headline font-black uppercase tracking-wide mb-1 text-white/40">{opponentTeam}</div>
-              <div className="font-headline font-black leading-none text-white" style={{ fontSize:'50px', letterSpacing:'-2px' }}>{score.opp}</div>
-            </div>
-          </div>
-          {hotTake && (
-            <p className="text-[11px] italic mt-3 leading-snug animate-in fade-in duration-500"
-              style={{ fontFamily:"'Barlow Condensed', sans-serif", color:'rgba(255,255,255,0.40)' }}>
-              &ldquo;{hotTake}&rdquo;
-            </p>
           )}
-        </div>
 
-        {/* ── Manager verdict ── */}
-        {verdict && (
-          <div className="rounded-[12px] px-3 py-2.5 animate-in fade-in duration-700"
-            style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)',
-              borderLeft:`3px solid ${resultColor}` }}>
-            <div className="text-[7px] font-code uppercase tracking-[3px] mb-1" style={{ color:resultColor }}>
-              Manager Analysis
+          {/* ── Score card (compact) ── */}
+          <div className="rounded-[14px] px-4 py-3 relative overflow-hidden"
+            style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)' }}>
+            {/* Full-time pill */}
+            <div className="flex justify-center mb-2">
+              <span className="inline-flex items-center gap-1 px-3 py-[2px] rounded-full font-code text-[7px] tracking-[3px] uppercase"
+                style={{ background:resultBg, border:`1px solid ${resultBorder}`, color:resultColor }}>
+                {resultLabel}
+              </span>
             </div>
-            <p className="text-[11px] italic leading-relaxed" style={{ fontFamily:"'Barlow Condensed', sans-serif", color:'rgba(255,255,255,0.65)' }}>
-              &ldquo;{verdict}&rdquo;
-            </p>
-          </div>
-        )}
-
-        {/* ── This gameweek's decisions ── */}
-        {lastDecisions && lastDecisions.length > 0 && (
-          <div className="rounded-[12px] overflow-hidden"
-            style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.06)' }}>
-            <div className="px-3 py-1.5 border-b" style={{ borderColor:'rgba(255,255,255,0.06)' }}>
-              <div className="text-[7px] font-code uppercase tracking-[3px]" style={{ color:'rgba(255,255,255,0.35)' }}>
-                Your Decisions This Gameweek
+            {/* Scoreline */}
+            <div className="flex items-center justify-center gap-3">
+              <div className="text-center flex-1">
+                <div className="text-[9px] font-headline font-black uppercase tracking-wide text-white mb-0.5">{userTeam}</div>
+                <div className="font-headline font-black leading-none text-white" style={{ fontSize:'38px', letterSpacing:'-2px' }}>{score.user}</div>
+              </div>
+              <div className="font-light text-white/20 pb-0.5" style={{ fontSize:'20px' }}>—</div>
+              <div className="text-center flex-1">
+                <div className="text-[9px] font-headline font-black uppercase tracking-wide text-white mb-0.5">{opponentTeam}</div>
+                <div className="font-headline font-black leading-none text-white" style={{ fontSize:'38px', letterSpacing:'-2px' }}>{score.opp}</div>
               </div>
             </div>
-            {lastDecisions.map((d, i) => (
-              <div key={i} className="px-3 py-2 border-b last:border-0 flex flex-col gap-1"
-                style={{ borderColor:'rgba(255,255,255,0.04)' }}>
-                <div className="text-[9px] font-headline font-black uppercase text-white/60 leading-tight truncate">
-                  {d.scenario.length > 60 ? d.scenario.slice(0,60)+'…' : d.scenario}
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[9px] font-code text-white/40">→</span>
-                  <span className="text-[9px] font-grotesk font-medium text-white/80 leading-tight">
-                    {d.chosenOption.length > 45 ? d.chosenOption.slice(0,45)+'…' : d.chosenOption}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 flex-wrap">
-                  <ImpactBadge val={d.impact.board} label="Board" />
-                  <ImpactBadge val={d.impact.fans}  label="Fans" />
-                  <ImpactBadge val={d.impact.squad} label="Squad" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Next fixture ── */}
-        {nextOpponent && (
-          <div className="rounded-[14px] p-3 flex items-center gap-3 relative overflow-hidden"
-            style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
-            <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-l-[14px]" style={{ background:'#FBB13C' }} />
-            <div className="flex-shrink-0 pl-2">
-              <div className="font-code text-[7px] uppercase tracking-[3px] mb-0.5" style={{ color:'#FBB13C' }}>Up Next</div>
-              <div className="font-code text-[10px] font-bold text-white" style={{ letterSpacing:'1px' }}>GW {nextGW}</div>
-            </div>
-            <div className="w-px h-9 flex-shrink-0" style={{ background:'rgba(255,255,255,0.07)' }} />
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-[18px] flex-shrink-0"
-              style={{ background:'linear-gradient(135deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))', border:'1px solid rgba(255,255,255,0.10)' }}>
-              🏟️
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-code text-[8px] uppercase tracking-[2px] mb-0.5" style={{ color:'#4E5A6E' }}>vs</div>
-              <div className="text-[16px] font-headline font-black uppercase text-white leading-none truncate">{nextOpponent}</div>
-              <div className="font-code text-[7px] uppercase tracking-wide mt-0.5" style={{ color:'#4E5A6E' }}>{venue}</div>
-            </div>
-            {winChance !== undefined && (
-              <div className="flex-shrink-0 text-center">
-                <div className="text-[20px] font-headline font-black leading-none"
-                  style={{ color:winChance>=55?'#1E6B3C':winChance>=40?'#FBB13C':'#D81159' }}>
-                  {winChance}%
-                </div>
-                <div className="font-code text-[7px] uppercase tracking-wider mt-0.5" style={{ color:'#4E5A6E' }}>Win</div>
-              </div>
+            {/* Hot take */}
+            {hotTake && (
+              <p className="text-[10px] italic mt-2 leading-snug text-center animate-in fade-in duration-500 text-white/75"
+                style={{ fontFamily:"'Barlow Condensed', sans-serif" }}>
+                &ldquo;{hotTake}&rdquo;
+              </p>
             )}
           </div>
-        )}
 
-        {/* ── Proceed button ── */}
-        <button onClick={onComplete}
-          className="w-full py-3.5 rounded-[14px] text-center font-headline font-black text-[13px] uppercase tracking-[3px]"
-          style={{ background:'linear-gradient(135deg,rgba(251,177,60,0.14),rgba(251,177,60,0.04))',
-            border:'1px solid rgba(251,177,60,0.28)', color:'#FBB13C' }}>
-          → Proceed to GW {nextGW ?? ''}
-        </button>
+          {/* ── Manager analysis ── */}
+          {verdict && (
+            <div className="rounded-[10px] px-3 py-2 animate-in fade-in duration-600"
+              style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', borderLeft:`3px solid ${resultColor}` }}>
+              <div className="text-[7px] font-code uppercase tracking-[3px] mb-1 text-white/50">Manager Analysis</div>
+              <p className="text-[11px] italic leading-snug text-white"
+                style={{ fontFamily:"'Barlow Condensed', sans-serif" }}>
+                &ldquo;{verdict}&rdquo;
+              </p>
+            </div>
+          )}
+
+          {/* ── Decisions this gameweek ── */}
+          {lastDecisions && lastDecisions.length > 0 && (
+            <div className="rounded-[10px] overflow-hidden"
+              style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.06)' }}>
+              <div className="px-3 py-1" style={{ borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+                <span className="text-[7px] font-code uppercase tracking-[3px] text-white/60">
+                  Your Decisions This Gameweek
+                </span>
+              </div>
+              {lastDecisions.map((d, i) => (
+                <div key={i} className="px-3 py-1.5" style={{ borderBottom: i < lastDecisions.length-1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                  {/* Scenario + choice on two compact lines */}
+                  <div className="text-[8px] font-headline font-black uppercase text-white leading-tight truncate">
+                    {d.scenario.length > 55 ? d.scenario.slice(0,55)+'…' : d.scenario}
+                  </div>
+                  <div className="flex items-start gap-1 mt-0.5">
+                    <span className="text-[8px] font-code text-white/40 flex-shrink-0 mt-px">→</span>
+                    <span className="text-[8px] font-grotesk text-white leading-tight line-clamp-1">
+                      {d.chosenOption.length > 50 ? d.chosenOption.slice(0,50)+'…' : d.chosenOption}
+                    </span>
+                  </div>
+                  {/* Impact badges always on their own row — full visibility */}
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    <ImpactBadge val={d.impact.board} label="Board" />
+                    <ImpactBadge val={d.impact.fans}  label="Fans" />
+                    <ImpactBadge val={d.impact.squad} label="Squad" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Next fixture ── */}
+          {nextOpponent && !isLastMatch && (
+            <div className="rounded-[10px] px-3 py-2 flex items-center gap-3 relative overflow-hidden"
+              style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)' }}>
+              <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background:'#FBB13C' }} />
+              <div className="flex-shrink-0 pl-2">
+                <div className="font-code text-[7px] uppercase tracking-[3px] mb-0.5" style={{ color:'#FBB13C' }}>Up Next</div>
+                <div className="font-code text-[9px] font-bold text-white">GW {nextGW}</div>
+              </div>
+              <div className="w-px h-7 flex-shrink-0" style={{ background:'rgba(255,255,255,0.07)' }} />
+              <div className="flex-1 min-w-0">
+                <div className="font-code text-[7px] uppercase tracking-[2px] text-white/50">vs</div>
+                <div className="text-[14px] font-headline font-black uppercase text-white leading-none truncate">{nextOpponent}</div>
+                <div className="font-code text-[7px] uppercase text-white/50 mt-0.5">{venue}</div>
+              </div>
+              {winChance !== undefined && (
+                <div className="flex-shrink-0 text-center">
+                  <div className="text-[18px] font-headline font-black leading-none"
+                    style={{ color:winChance>=55?'#1E6B3C':winChance>=40?'#FBB13C':'#D81159' }}>
+                    {winChance}%
+                  </div>
+                  <div className="font-code text-[7px] uppercase text-white/50">Win</div>
+                </div>
+              )}
+            </div>
+          )}
+
+        </div>{/* end scrollable body */}
+
+        {/* ── Sticky proceed button ── */}
+        <div className="flex-shrink-0 px-3 py-2" style={{ background:'#07090F', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          <button onClick={onComplete}
+            className="w-full py-3 rounded-[12px] text-center font-headline font-black text-[12px] uppercase tracking-[3px]"
+            style={{ background:'linear-gradient(135deg,rgba(251,177,60,0.14),rgba(251,177,60,0.04))',
+              border:'1px solid rgba(251,177,60,0.28)', color:'#FBB13C' }}>
+            {isLastMatch ? '→ Board Meeting — End of Season Review' : `→ Proceed to GW ${nextGW ?? ''}`}
+          </button>
+        </div>
+
       </div>
     );
   }
 
   // ── Simulation view ───────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col items-center gap-4 w-full h-full justify-center px-4 relative">
-      <div className="relative premium-glass p-0.5 rounded-xl w-full max-w-[340px] aspect-[4/3] border-white/10 overflow-hidden shadow-inner">
-        <canvas ref={canvasRef} width={300} height={225} className="w-full h-full" />
+    <div className="flex flex-col items-center gap-4 w-full h-full justify-center px-4 relative animate-in fade-in duration-300">
+      <div className="relative rounded-xl w-full max-w-[340px] aspect-[4/3] overflow-hidden shadow-inner" style={{ background: '#1a4a1a', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <canvas ref={canvasRef} width={300} height={225} className="w-full h-full" style={{ background: '#1a4a1a', display: 'block' }} />
         <div className="absolute top-2 right-2">
           <div className="text-[9px] font-headline text-accent/80 uppercase font-black tracking-widest italic animate-pulse">
             LIVE SIMULATION

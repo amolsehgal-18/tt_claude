@@ -102,7 +102,7 @@ function PsychBar({ label, value, color, warn }: { label: string; value: number;
     <div className="space-y-1">
       <div className="flex justify-between items-center">
         <span className="text-[10px] uppercase tracking-widest flex items-center gap-1"
-          style={{ fontFamily: "'Share Tech Mono',monospace", color: 'rgba(255,255,255,0.42)' }}>
+          style={{ fontFamily: "'Share Tech Mono',monospace", color: 'rgba(255,255,255,0.8)' }}>
           {label}{warn && <span style={{ color: '#D81159' }}>⚠</span>}
         </span>
         <span className="text-[10px]"
@@ -254,7 +254,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
   };
 
   return (
-    <div className="h-dvh overflow-hidden" style={{ background: '#07090F' }}>
+    <div className="h-dvh overflow-y-auto animate-in fade-in duration-500" style={{ background: '#07090F' }}>
       <style>{`
         @keyframes trophyFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
         @keyframes verdictPulse{ 0%,100%{opacity:.3} 50%{opacity:.9} }
@@ -283,7 +283,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
             {state.userTeam}
           </div>
           <div className="text-[10px]"
-            style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.32)' }}>
+            style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.75)' }}>
             W{state.wins} · D{state.draws} · L{state.losses} · {pts} pts
           </div>
         </div>
@@ -295,7 +295,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
         {/* 4 — Archetype block */}
         <div className="text-center space-y-1.5">
           <div className="text-[8px] uppercase tracking-[0.4em]"
-            style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.28)' }}>
+            style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.55)' }}>
             You managed like
           </div>
           <div className="uppercase leading-none"
@@ -308,7 +308,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
           </div>
           {ARCHETYPE_TAGS[archetype] && (
             <div className="text-[10px] italic"
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.38)' }}>
+              style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.7)' }}>
               {ARCHETYPE_TAGS[archetype]}
             </div>
           )}
@@ -320,7 +320,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
               </span>
             ) : (
               <p className="text-[12px] italic leading-snug text-center"
-                style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.55)' }}>
+                style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'white' }}>
                 &ldquo;{verdict}&rdquo;
               </p>
             )}
@@ -337,7 +337,7 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
         {/* 6 — Psych breakdown */}
         <div className="space-y-2">
           <div className="text-[8px] uppercase tracking-[0.3em]"
-            style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.28)' }}>
+            style={{ fontFamily:"'Share Tech Mono',monospace", color:'rgba(255,255,255,0.55)' }}>
             Psych Profile
           </div>
           <div className="space-y-2">

@@ -14,6 +14,7 @@ export interface PressConferenceResult {
 interface PressConferenceCardProps {
   question:   string;
   onComplete: (result: PressConferenceResult) => void;
+  onImpact?:  (impacts: { board: number; fans: number; squad: number }) => void;
 }
 
 // ─── Journalist roster ────────────────────────────────────────────────────────
@@ -36,9 +37,9 @@ function pickJournalist() {
 // ─── Crowd reactions ──────────────────────────────────────────────────────────
 
 const CROWD_REACTIONS: Record<string, string[]> = {
-  combustible: ['😤', '😮', '🔥', '👀'],
-  neutral:     ['🤔', '👏', '📝', '🎤'],
-  composed:    ['👏', '🤝', '💬', '📋'],
+  combustible: ['🔥', '😡', '🗣️', '⚡', '💥'],
+  neutral:     ['📢', '👏', '🎙️', '🤔', '📰'],
+  composed:    ['🤝', '👏', '🙌', '😌', '💬'],
 };
 
 // ─── Question pool ────────────────────────────────────────────────────────────
@@ -111,7 +112,7 @@ function dialColor(tone: number) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export const PressConferenceCard = ({ question, onComplete }: PressConferenceCardProps) => {
+export const PressConferenceCard = ({ question, onComplete, onImpact }: PressConferenceCardProps) => {
   const [tone,          setTone]          = useState(50);
   const [loading,       setLoading]       = useState(false);
   const [reaction,      setReaction]      = useState<string | null>(null);
@@ -137,7 +138,6 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
     const toneLabel = tone > 65 ? 'combustible' : tone > 35 ? 'neutral' : 'composed';
     const pool = CROWD_REACTIONS[toneLabel];
     setCrowdEmoji(pool[Math.floor(Math.random() * pool.length)]);
-    setTimeout(() => setCrowdEmoji(null), 1600);
     try {
       const res  = await fetch('/api/press-conference', {
         method:  'POST',
@@ -145,7 +145,10 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
         body:    JSON.stringify({ question, answer: noComment ? '' : answer, noComment }),
       });
       const data = await res.json() as PressConferenceResult;
+      // Fire impact immediately so the tension triangle pulses while reaction is shown
+      onImpact?.(data.impacts);
       setReaction(data.reaction);
+      // emoji stays visible — cleared naturally when component unmounts (next screen)
       setTimeout(() => onComplete(data), 2200);
     } catch {
       onComplete({ reaction: '', impacts: { board: 0, fans: 0, squad: 0 }, psychDelta: { TF: 0, D: 0, MP: 0, MM: 0, TT: 0 } });
@@ -174,16 +177,6 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
           cursor: pointer;
         }
       `}</style>
-
-      {/* Crowd reaction emoji flash */}
-      {crowdEmoji && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none animate-in fade-in zoom-in-50 duration-200">
-          <div className="text-[80px] opacity-80 animate-out fade-out zoom-out duration-700"
-            style={{ filter: 'drop-shadow(0 0 24px rgba(251,177,60,0.6))' }}>
-            {crowdEmoji}
-          </div>
-        </div>
-      )}
 
       <div className="w-full max-w-[310px] flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
@@ -297,6 +290,16 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
           </>
         )}
       </div>
+
+      {/* Crowd reaction — appears below the card, not overlaid on top */}
+      {crowdEmoji && (
+        <div className="w-full max-w-[310px] flex justify-center pt-2 pointer-events-none animate-in fade-in zoom-in-75 duration-300">
+          <div className="text-[56px]"
+            style={{ filter: 'drop-shadow(0 0 20px rgba(251,177,60,0.6))' }}>
+            {crowdEmoji}
+          </div>
+        </div>
+      )}
     </>
   );
 };
