@@ -95,7 +95,9 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [showSwipeHint, setShowSwipeHint] = useState(false);
 
   // ── New retention & UX states ────────────────────────────────────────────
-  const [sackingPhase, setSackingPhase]   = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [sackingPhase, setSackingPhase]     = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [successPhase, setSuccessPhase]     = useState<0 | 1 | 2 | 3 | 4>(0);
+  const [successChoice, setSuccessChoice]   = useState<'extension' | 'new_club' | null>(null);
   const [psychTeaserText, setPsychTeaserText] = useState<string | null>(null);
   const [muteOn, setMuteOn]               = useState(false);
 
@@ -118,6 +120,17 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.isSacked]);
+
+  // ── Success sequence auto-advance ────────────────────────────────────────
+  useEffect(() => {
+    if (!state?.isSeasonEnd || state.isSacked || successPhase !== 0) return;
+    getSoundManager().playWinFanfare();
+    setSuccessPhase(1);
+    const t1 = setTimeout(() => { getSoundManager().playCrowdCheer(); setSuccessPhase(2); }, 2800);
+    const t2 = setTimeout(() => setSuccessPhase(3), 6000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.isSeasonEnd, state?.isSacked]);
 
   // ── Load manager profile on mount — skip name step if returning manager ───
   useEffect(() => {
@@ -750,6 +763,133 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     );
   }
 
+  // ── Success cinematic (phases 1-3) ──────────────────────────────────────
+  if (state.isSeasonEnd && !state.isSacked && successPhase >= 1 && successPhase <= 3) {
+    const pos  = state.currentLeaguePosition;
+    const pts  = state.wins * 3 + state.draws;
+    const trophy = pos === 1 ? '🏆' : pos <= 4 ? '🥇' : pos >= 18 ? '🛡️' : '⚽';
+    const achievement =
+      pos === 1  ? 'Champions. The title is yours.' :
+      pos <= 4   ? 'Champions League football secured.' :
+      pos <= 17  ? 'The great escape. Survival achieved.' :
+                   'Season complete.';
+    const CHAIRMAN_LINES = [
+      `"${state.managerName}, I just want to say — on behalf of the entire board — well done. Truly."`,
+      `"The chairman has been on the phone personally. He wants you to know the board is delighted."`,
+      `"You've done something special here. The fans won't forget this season."`,
+      `"Results like these don't happen by accident. The board recognise that."`,
+    ];
+    const chairmanLine = CHAIRMAN_LINES[(state.wins + state.matchesPlayed) % CHAIRMAN_LINES.length];
+
+    return (
+      <div className="flex flex-col h-dvh max-md:max-w-md md:max-w-md mx-auto items-center justify-center relative overflow-hidden"
+        style={{ background: '#07090F' }}>
+        {/* Subtle gold glow background */}
+        <style>{`@keyframes trophyFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}`}</style>
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 60%, rgba(251,177,60,0.07) 0%, transparent 70%)' }} />
+
+        {/* Phase 1 — The Call */}
+        {successPhase === 1 && (
+          <div className="text-center space-y-6 px-8 animate-in fade-in duration-500">
+            <div className="text-[64px]" style={{ animation: 'trophyFloat 1.2s ease-in-out infinite' }}>📱</div>
+            <div className="space-y-2">
+              <div className="text-[11px] font-code uppercase tracking-[4px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Incoming call</div>
+              <div className="text-2xl font-headline font-black uppercase italic text-white">The Chairman</div>
+            </div>
+            <div className="flex items-center justify-center gap-1.5">
+              {[0,1,2].map(i => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full animate-bounce"
+                  style={{ background: '#1E6B3C', animationDelay: `${i*0.15}s` }} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Phase 2 — The Announcement */}
+        {successPhase === 2 && (
+          <div className="text-center space-y-5 px-6 animate-in fade-in duration-300">
+            {/* Gold flash */}
+            <div className="absolute inset-0 pointer-events-none animate-out fade-out duration-700 z-50"
+              style={{ background: 'rgba(251,177,60,0.12)' }} />
+            <div className="text-[52px]" style={{ animation: 'trophyFloat 2s ease-in-out infinite' }}>{trophy}</div>
+            <div className="space-y-2">
+              <div className="text-[10px] font-code uppercase tracking-[4px] mb-2" style={{ color: '#FBB13C' }}>
+                Official Statement
+              </div>
+              <div className="text-3xl font-headline font-black uppercase italic leading-none"
+                style={{ color: '#FBB13C', letterSpacing: '-1px' }}>
+                OBJECTIVE MET
+              </div>
+              <div className="text-[13px] font-headline font-black uppercase italic text-white mt-1">
+                {achievement}
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full"
+              style={{ background: 'rgba(30,107,60,0.15)', border: '1px solid rgba(30,107,60,0.3)' }}>
+              <span className="font-headline font-black uppercase text-[13px] text-white">
+                {pos}{pos===1?'st':pos===2?'nd':pos===3?'rd':'th'} Place · W{state.wins} D{state.draws} L{state.losses} · {pts}pts
+              </span>
+            </div>
+            <p className="text-[11px] italic leading-relaxed"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'rgba(255,255,255,0.45)' }}>
+              {chairmanLine}
+            </p>
+          </div>
+        )}
+
+        {/* Phase 3 — The Contract Choice */}
+        {successPhase === 3 && (
+          <div className="w-full px-5 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center space-y-2">
+              <div className="text-[10px] font-code uppercase tracking-[4px]" style={{ color: '#FBB13C' }}>Contract Offer</div>
+              <div className="text-2xl font-headline font-black uppercase italic text-white">What's your next move?</div>
+              <div className="text-[11px] font-headline text-white/40 uppercase tracking-wide">{state.userTeam}</div>
+            </div>
+
+            {/* Option 1 — Sign Extension */}
+            <button
+              onClick={() => { setSuccessChoice('extension'); setSuccessPhase(4); }}
+              className="w-full rounded-2xl p-4 text-left space-y-1 transition-all active:scale-[0.98]"
+              style={{ background: 'rgba(30,107,60,0.15)', border: '1px solid rgba(30,107,60,0.35)' }}>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">✍️</span>
+                <div>
+                  <div className="font-headline font-black uppercase text-white text-[15px] leading-none">Sign Contract Extension</div>
+                  <div className="font-code text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                    Stay at {state.userTeam} · New mission, same badge
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            {/* Option 2 — New Club */}
+            <button
+              onClick={() => { setSuccessChoice('new_club'); setSuccessPhase(4); }}
+              className="w-full rounded-2xl p-4 text-left space-y-1 transition-all active:scale-[0.98]"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }}>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">✈️</span>
+                <div>
+                  <div className="font-headline font-black uppercase text-white text-[15px] leading-none">Take on a New Challenge</div>
+                  <div className="font-code text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                    Fresh start · New club · New reputation to build
+                  </div>
+                </div>
+              </div>
+            </button>
+
+            <div className="text-center">
+              <div className="text-[9px] font-code uppercase tracking-[2px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                See your full season report first →
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // ── Sacking cinematic (phases 1-3) ───────────────────────────────────────
   if (state.isSacked && sackingPhase >= 1 && sackingPhase <= 3) {
     const SACKING_STATEMENTS = [
@@ -840,7 +980,11 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   }
 
   // ── Season end → cinematic psych summary ─────────────────────────────────
-  if (state.isSeasonEnd || (state.isSacked && sackingPhase >= 4)) {
+  const showSeasonSummary =
+    (state.isSeasonEnd && !state.isSacked && successPhase >= 4) ||
+    (state.isSacked && sackingPhase >= 4);
+
+  if (showSeasonSummary) {
     const arch = seasonArchetype ?? deriveArchetype(psychProfile);
     return (
       <SeasonSummary
@@ -852,15 +996,30 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
           setPsychProfile(createInitialProfile());
           setSeasonArchetype(null);
           setSackingPhase(0);
+          setSuccessPhase(0);
           const profile = loadManagerProfile();
-          if (profile) {
-            setManagerProfile(profile);
-            setSetupName(profile.name);
-            setSetupTeam(profile.team);
+          const name = profile?.name ?? setupName;
+          const team = profile?.team ?? setupTeam;
+          setSetupName(name);
+          // Extension: keep same club, jump straight to mission select
+          // New club:  keep name but clear team so user picks a new one
+          if (successChoice === 'extension') {
+            setSetupTeam(team);
             setSetupStep(1);
-          } else {
+          } else if (successChoice === 'new_club') {
+            setSetupTeam('');
             setSetupStep(0);
+          } else {
+            // Sacked path — keep profile as-is, go to step 1 if profile exists
+            if (profile) {
+              setManagerProfile(profile);
+              setSetupTeam(profile.team);
+              setSetupStep(1);
+            } else {
+              setSetupStep(0);
+            }
           }
+          setSuccessChoice(null);
         }}
       />
     );
