@@ -16,6 +16,31 @@ interface PressConferenceCardProps {
   onComplete: (result: PressConferenceResult) => void;
 }
 
+// ─── Journalist roster ────────────────────────────────────────────────────────
+
+const JOURNALISTS = [
+  { name: 'Sarah Chen',    outlet: 'Sky Sports'   },
+  { name: 'Marcus Webb',   outlet: 'BBC Sport'    },
+  { name: 'Priya Sharma',  outlet: 'The Athletic' },
+  { name: 'James Hartley', outlet: 'talkSPORT'   },
+  { name: 'Lena Köhler',   outlet: 'ESPN FC'     },
+  { name: 'Rui Fonseca',   outlet: 'Sky Sports'   },
+  { name: 'Donna Clarke',  outlet: 'BBC Sport'    },
+  { name: 'Tom Ashworth',  outlet: 'The Guardian' },
+];
+
+function pickJournalist() {
+  return JOURNALISTS[Math.floor(Math.random() * JOURNALISTS.length)];
+}
+
+// ─── Crowd reactions ──────────────────────────────────────────────────────────
+
+const CROWD_REACTIONS: Record<string, string[]> = {
+  combustible: ['😤', '😮', '🔥', '👀'],
+  neutral:     ['🤔', '👏', '📝', '🎤'],
+  composed:    ['👏', '🤝', '💬', '📋'],
+};
+
 // ─── Question pool ────────────────────────────────────────────────────────────
 
 const QUESTIONS = [
@@ -87,10 +112,12 @@ function dialColor(tone: number) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const PressConferenceCard = ({ question, onComplete }: PressConferenceCardProps) => {
-  const [tone,     setTone]     = useState(50);
-  const [loading,  setLoading]  = useState(false);
-  const [reaction, setReaction] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [tone,          setTone]          = useState(50);
+  const [loading,       setLoading]       = useState(false);
+  const [reaction,      setReaction]      = useState<string | null>(null);
+  const [timeLeft,      setTimeLeft]      = useState(5);
+  const [crowdEmoji,    setCrowdEmoji]     = useState<string | null>(null);
+  const [journalist]                      = useState(() => pickJournalist());
 
   const cards = getPlaybookCards(tone);
 
@@ -106,6 +133,11 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
   const submit = async (answer: string, noComment = false) => {
     if (loading || reaction) return;
     setLoading(true);
+    // Show crowd reaction emoji immediately before API returns
+    const toneLabel = tone > 65 ? 'combustible' : tone > 35 ? 'neutral' : 'composed';
+    const pool = CROWD_REACTIONS[toneLabel];
+    setCrowdEmoji(pool[Math.floor(Math.random() * pool.length)]);
+    setTimeout(() => setCrowdEmoji(null), 1600);
     try {
       const res  = await fetch('/api/press-conference', {
         method:  'POST',
@@ -143,6 +175,16 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
         }
       `}</style>
 
+      {/* Crowd reaction emoji flash */}
+      {crowdEmoji && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none animate-in fade-in zoom-in-50 duration-200">
+          <div className="text-[80px] opacity-80 animate-out fade-out zoom-out duration-700"
+            style={{ filter: 'drop-shadow(0 0 24px rgba(251,177,60,0.6))' }}>
+            {crowdEmoji}
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-[310px] flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
         {/* ── Header ── */}
@@ -173,8 +215,8 @@ export const PressConferenceCard = ({ question, onComplete }: PressConferenceCar
           }}
         >
           <div className="flex items-center gap-1.5 mb-1.5 pb-1.5" style={{ borderBottom: '1px solid rgba(251,177,60,0.12)' }}>
-            <span className="font-headline font-black text-[9px] uppercase tracking-[2px]" style={{ color: '#FBB13C' }}>Reporter</span>
-            <span className="text-[8px] uppercase tracking-widest opacity-40 font-headline">— Post-match</span>
+            <span className="font-headline font-black text-[9px] uppercase tracking-[2px]" style={{ color: '#FBB13C' }}>{journalist.name}</span>
+            <span className="text-[8px] uppercase tracking-widest opacity-40 font-headline">— {journalist.outlet}</span>
           </div>
           <p className="font-headline font-black text-white leading-snug italic" style={{ fontSize: '13px', fontWeight: 800 }}>
             &ldquo;{question}&rdquo;
