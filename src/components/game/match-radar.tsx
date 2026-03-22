@@ -18,6 +18,8 @@ interface MatchRadarProps {
   varCardsLeft?: number;
   momentumBuffer?: number[];
   onVARUse?: (newResult: 'win' | 'draw') => void;
+  kitPrimary?:   string;
+  kitSecondary?: string;
 }
 
 interface Player {
@@ -31,6 +33,7 @@ export const MatchRadar = ({
   userTeam, opponentTeam, result, onComplete, hotTake,
   nextOpponent, nextGW, winChance, verdict, lastDecisions,
   varCardsLeft = 0, momentumBuffer = [], onVARUse,
+  kitPrimary, kitSecondary,
 }: MatchRadarProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [showFinal, setShowFinal]     = useState(false);
@@ -115,8 +118,8 @@ export const MatchRadar = ({
     const userFormation = [[0.08,0.5],[0.22,0.25],[0.22,0.42],[0.22,0.58],[0.22,0.75],[0.42,0.2],[0.42,0.4],[0.42,0.6],[0.42,0.8],[0.65,0.35],[0.65,0.65]];
     const oppFormation  = [[0.92,0.5],[0.78,0.25],[0.78,0.42],[0.78,0.58],[0.78,0.75],[0.58,0.2],[0.58,0.4],[0.58,0.6],[0.58,0.8],[0.35,0.35],[0.35,0.65]];
     const players: Player[] = [
-      ...userFormation.map(p => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'user' as const, color:'#3b82f6', baseX:p[0]*width, baseY:p[1]*height })),
-      ...oppFormation.map(p  => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'opp'  as const, color:'#ef4444', baseX:p[0]*width, baseY:p[1]*height })),
+      ...userFormation.map(p => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'user' as const, color: kitPrimary   ?? '#3b82f6', baseX:p[0]*width, baseY:p[1]*height })),
+      ...oppFormation.map(p  => ({ x:p[0]*width, y:p[1]*height, vx:0, vy:0, team:'opp'  as const, color: kitSecondary ?? '#ef4444', baseX:p[0]*width, baseY:p[1]*height })),
     ];
     const ball = { x: width/2, y: height/2, targetPlayerIndex: Math.floor(Math.random()*players.length) };
     let animationFrame: number;

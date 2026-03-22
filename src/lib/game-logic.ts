@@ -385,6 +385,8 @@ export type ManagerProfile = {
   name: string;
   team: string;
   nameChangedAt: number; // timestamp ms
+  kitPrimary:   string;  // user team colour, default '#3b82f6'
+  kitSecondary: string;  // opponent colour,  default '#ef4444'
 };
 
 export function loadManagerProfile(): ManagerProfile | null {

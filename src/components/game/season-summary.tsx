@@ -6,13 +6,13 @@
  * Palette: #D81159 | #8F2D56 | #1E6B3C | #FBB13C | #73D2DE | #07090F
  */
 
-import React, { useEffect, useState } from 'react';
-import { CAREER_MODES as MODES } from '@/lib/game-logic';
+import React, { useEffect, useRef, useState } from 'react';
 import type { GameState } from '@/lib/game-logic';
 import type { PsychProfile, Archetype } from '@/lib/psychProfile';
 import { buildVerdictPrompt } from '@/lib/psychProfile';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { loadLegacy, saveLegacy, recordSeasonEnd } from '@/lib/legacy';
 
 interface SeasonSummaryProps {
   state:        GameState;
@@ -132,16 +132,41 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [shared,  setShared]  = useState(false);
+  const [copied,  setCopied]  = useState(false);
+  const legacySavedRef        = useRef(false);
   const { firestore } = useFirestore();
   const { user }      = useUser();
   const trophy        = getTrophy(state);
   const seasonYear    = new Date().getFullYear();
   const pts           = state.wins * 3 + state.draws;
+  const decisionsCount = state.wins * 3 + state.draws * 1 + state.losses;
 
   useEffect(() => {
     const cacheKey = `tt_verdict_${state.id}`;
     const local = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
-    if (local) { setVerdict(local); setLoading(false); return; }
+    if (local) {
+      setVerdict(local);
+      setLoading(false);
+      // Save legacy if not done yet
+      if (!legacySavedRef.current) {
+        legacySavedRef.current = true;
+        const legacy = loadLegacy();
+        const updated = recordSeasonEnd(legacy, {
+          season:    legacy.totalSeasons + 1,
+          archetype: archetype,
+          position:  state.currentLeaguePosition,
+          sacked:    state.isSacked,
+          wins:      state.wins,
+          draws:     state.draws,
+          losses:    state.losses,
+          points:    pts,
+          mode:      state.mode,
+          year:      new Date().getFullYear(),
+        }, decisionsCount);
+        saveLegacy(updated);
+      }
+      return;
+    }
 
     const go = async () => {
       if (firestore && user) {
@@ -149,7 +174,25 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
           const snap = await getDoc(doc(firestore, 'verdicts', `${user.uid}_${state.id}`));
           if (snap.exists()) {
             const v = snap.data()?.verdict as string;
-            setVerdict(v); localStorage.setItem(cacheKey, v); setLoading(false); return;
+            setVerdict(v); localStorage.setItem(cacheKey, v); setLoading(false);
+            if (!legacySavedRef.current) {
+              legacySavedRef.current = true;
+              const legacy = loadLegacy();
+              const updated = recordSeasonEnd(legacy, {
+                season:    legacy.totalSeasons + 1,
+                archetype: archetype,
+                position:  state.currentLeaguePosition,
+                sacked:    state.isSacked,
+                wins:      state.wins,
+                draws:     state.draws,
+                losses:    state.losses,
+                points:    pts,
+                mode:      state.mode,
+                year:      new Date().getFullYear(),
+              }, decisionsCount);
+              saveLegacy(updated);
+            }
+            return;
           }
         } catch { /* fall through */ }
       }
@@ -161,11 +204,38 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
         setVerdict(text); localStorage.setItem(cacheKey, text);
         if (firestore && user) setDocumentNonBlocking(doc(firestore, 'verdicts', `${user.uid}_${state.id}`), { verdict: text, archetype, timestamp: new Date().toISOString() });
       } catch { setVerdict("A season of decisions. Some of them even worked."); }
-      finally  { setLoading(false); }
+      finally  {
+        setLoading(false);
+        if (!legacySavedRef.current) {
+          legacySavedRef.current = true;
+          const legacy = loadLegacy();
+          const updated = recordSeasonEnd(legacy, {
+            season:    legacy.totalSeasons + 1,
+            archetype: archetype,
+            position:  state.currentLeaguePosition,
+            sacked:    state.isSacked,
+            wins:      state.wins,
+            draws:     state.draws,
+            losses:    state.losses,
+            points:    pts,
+            mode:      state.mode,
+            year:      new Date().getFullYear(),
+          }, decisionsCount);
+          saveLegacy(updated);
+        }
+      }
     };
     go();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleWordleCopy = () => {
+    const dots = [state.wins > 0 ? '🟢' : '🔴', state.draws > 0 ? '🟡' : '🔴', state.losses < 3 ? '🟢' : '🔴'].join('');
+    const text = `Touchline Tantrum ⚽\n${state.userTeam} · ${state.currentLeaguePosition}${ordinalSuffix(state.currentLeaguePosition)}\n${archetype}\nW${state.wins} D${state.draws} L${state.losses} · ${pts}pts\n${dots}\n#TouchlineTantrum`;
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
 
   const handleShare = async () => {
     if (sharing) return;
@@ -340,6 +410,18 @@ export const SeasonSummary = ({ state, psychProfile, archetype, onRestart }: Sea
             className="w-full py-2 rounded uppercase tracking-widest text-[11px] font-black transition-colors"
             style={{ fontFamily:"'Barlow Condensed',sans-serif", color:'rgba(255,255,255,0.38)', border:'1px solid rgba(255,255,255,0.1)', background:'transparent' }}>
             New Season
+          </button>
+
+          {/* Wordle copy button */}
+          <button onClick={handleWordleCopy}
+            className="w-full py-2 rounded uppercase tracking-widest text-[10px] font-black transition-all"
+            style={{
+              fontFamily:"'Share Tech Mono',monospace",
+              color: copied ? '#1E6B3C' : '#FBB13C',
+              border: copied ? '1px solid rgba(30,107,60,0.4)' : '1px solid rgba(251,177,60,0.3)',
+              background: copied ? 'rgba(30,107,60,0.08)' : 'transparent',
+            }}>
+            {copied ? '✓ Copied!' : '📋 Copy Result'}
           </button>
         </div>
 

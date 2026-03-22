@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GameState, INITIAL_STATE, calculateMood, saveGameLocally, getLeagueTable, CAREER_MODES, CareerMode, calculateMatchResult, simulateGameweek, computeFlags, getMomentumWinChance, ALL_TEAMS, loadManagerProfile, saveManagerProfile, isNameLocked, nameLockDaysRemaining, ManagerProfile, LastDecision, getMatchVerdict } from '@/lib/game-logic';
 import { loadCareerRating, saveCareerRating, applySeasonEnd } from '@/lib/career-rating';
+import { computeCarryOver, loadLegacy } from '@/lib/legacy';
 import { SlantedButton } from './slanted-elements';
 import { ManagerMoodView } from './manager-mood';
 import { MatchRadar } from './match-radar';
@@ -81,6 +82,18 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
   const [setupTeam, setSetupTeam]         = useState("United FC");
   const [managerProfile, setManagerProfile] = useState<ManagerProfile | null>(null);
 
+  // ── Kit colours ──────────────────────────────────────────────────────────
+  const KIT_COLOURS = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899','#ffffff','#6b7280'];
+  const [kitPrimary,   setKitPrimary]   = useState(managerProfile?.kitPrimary   ?? '#3b82f6');
+  const [kitSecondary, setKitSecondary] = useState(managerProfile?.kitSecondary ?? '#ef4444');
+
+  // ── Vote of Confidence ───────────────────────────────────────────────────
+  const [showVoC, setShowVoC]   = useState(false);
+  const vocDoneRef               = useRef(false);
+
+  // ── Swipe hint ───────────────────────────────────────────────────────────
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
+
   // ── New retention & UX states ────────────────────────────────────────────
   const [sackingPhase, setSackingPhase]   = useState<0 | 1 | 2 | 3 | 4>(0);
   const [psychTeaserText, setPsychTeaserText] = useState<string | null>(null);
@@ -117,6 +130,24 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Swipe hint: show on very first card for a brand new player ───────────
+  useEffect(() => {
+    if (!state) return;
+    const legacy = loadLegacy();
+    if (legacy.totalDecisions === 0 && state.cardsSeen === 0) {
+      setTimeout(() => setShowSwipeHint(true), 800);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Auto-dismiss swipe hint after 3.5s ───────────────────────────────────
+  useEffect(() => {
+    if (showSwipeHint) {
+      const t = setTimeout(() => setShowSwipeHint(false), 3500);
+      return () => clearTimeout(t);
+    }
+  }, [showSwipeHint]);
 
   const { firestore } = useFirestore();
   const { user }      = useUser();
@@ -240,6 +271,12 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setCurrentScenario(null);
     setTimeLeft(15);
 
+    // ── Vote of Confidence trigger ─────────────────────────────────────────
+    if (newState.boardSupport < 0.25 && !vocDoneRef.current && !newState.isSacked) {
+      vocDoneRef.current = true;
+      setTimeout(() => setShowVoC(true), 600);
+    }
+
     // ── Psych teaser milestones ────────────────────────────────────────────
     if (newCardsSeen === 6) {
       const trendArch = deriveArchetype(updatedProfile);
@@ -324,6 +361,12 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
     setState(newState);
     saveGameLocally(newState);
     setShowPressConference(false);
+
+    // ── Vote of Confidence trigger ─────────────────────────────────────────
+    if (newState.boardSupport < 0.25 && !vocDoneRef.current && !newState.isSacked) {
+      vocDoneRef.current = true;
+      setTimeout(() => setShowVoC(true), 600);
+    }
 
     // Check match trigger
     if (newCardsSeen % 3 === 0) {
@@ -578,6 +621,44 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
                   <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest px-1">Club Identity</label>
                   <Input value={setupTeam} onChange={(e) => setSetupTeam(e.target.value)} className="bg-white/5 h-11 border-white/10 font-bold text-sm" />
                 </div>
+                {/* Kit colours */}
+                <div className="space-y-1 text-left">
+                  <label className="text-[9px] font-headline uppercase font-black opacity-50 tracking-widest px-1">Kit Colours</label>
+                  <div className="flex gap-3 items-center px-1">
+                    <div className="flex-1">
+                      <div className="text-[8px] font-code opacity-40 uppercase tracking-wide mb-1">Your Kit</div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {KIT_COLOURS.map(c => (
+                          <button key={c} onClick={() => setKitPrimary(c)}
+                            className="w-6 h-6 rounded-full border-2 transition-all"
+                            style={{ background: c, borderColor: kitPrimary === c ? '#FBB13C' : 'transparent' }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[8px] font-code opacity-40 uppercase tracking-wide mb-1">Opponent</div>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {KIT_COLOURS.map(c => (
+                          <button key={c} onClick={() => setKitSecondary(c)}
+                            className="w-6 h-6 rounded-full border-2 transition-all"
+                            style={{ background: c, borderColor: kitSecondary === c ? '#FBB13C' : 'transparent' }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Carry-over reason */}
+                {(() => {
+                  const legacy = loadLegacy();
+                  const co = computeCarryOver(legacy);
+                  if (!co.reason) return null;
+                  return (
+                    <div className="text-[8px] font-code text-center px-2 py-1.5 rounded"
+                      style={{ background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      {co.reason}
+                    </div>
+                  );
+                })()}
                 <SlantedButton onClick={() => setSetupStep(1)} className="w-full py-4 bg-white text-black font-black uppercase text-xs tracking-widest mt-2">
                   Next: Choose Challenge
                 </SlantedButton>
@@ -640,13 +721,22 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
                     name,
                     team,
                     nameChangedAt: nameActuallyChanged ? Date.now() : (prevProfile?.nameChangedAt ?? Date.now()),
+                    kitPrimary,
+                    kitSecondary,
                   };
                   saveManagerProfile(newProfile);
                   setManagerProfile(newProfile);
+                  // Apply carry-over bonuses from previous seasons
+                  const legacy = loadLegacy();
+                  const co = computeCarryOver(legacy);
                   const s = INITIAL_STATE(setupMode, setupDuration, name, team);
+                  s.boardSupport  = Math.max(0.20, Math.min(0.90, s.boardSupport  + co.boardBonus  / 100));
+                  s.fanSupport    = Math.max(0.15, Math.min(0.90, s.fanSupport    + co.fanBonus    / 100));
+                  s.dressingRoom  = Math.max(0.20, Math.min(0.90, s.dressingRoom  + co.squadBonus  / 100));
                   setState(s);
                   setPsychProfile(createInitialProfile());
                   setSeasonArchetype(null);
+                  vocDoneRef.current = false;
                   saveGameLocally(s);
                 }}
                 className="w-full py-5 text-base font-black tracking-widest uppercase bg-white text-black">
@@ -845,6 +935,62 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
         </div>
       </div>
 
+      {/* ── Vote of Confidence overlay ── */}
+      {showVoC && (
+        <div className="absolute inset-0 z-[200] flex flex-col items-center justify-center backdrop-blur-xl animate-in fade-in duration-400"
+          style={{ background: 'rgba(7,9,15,0.96)' }}>
+          <div className="w-full max-w-sm px-4 space-y-4">
+            {/* Header */}
+            <div className="text-center space-y-1">
+              <div className="text-[10px] font-code uppercase tracking-[4px]" style={{ color: '#D81159' }}>⚠ Board Emergency</div>
+              <h2 className="text-2xl font-headline font-black uppercase italic text-white">Vote of Confidence</h2>
+              <p className="text-[11px] font-grotesk leading-snug" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                The board have called an emergency meeting. Your position is under threat. How do you respond?
+              </p>
+            </div>
+            {/* Options */}
+            {[
+              { label: 'Issue a defiant press statement', sub: 'Public show of strength', board: +18, fans: +8,  squad: +4  },
+              { label: 'Hold emergency team meeting',     sub: 'Win the dressing room first', board: +10, fans: +5,  squad: +20 },
+              { label: 'Request private board talks',     sub: 'Negotiate behind closed doors', board: +25, fans: -5, squad: -3  },
+            ].map((opt, i) => (
+              <button key={i}
+                onClick={() => {
+                  setState(prev => {
+                    if (!prev) return prev;
+                    const next = {
+                      ...prev,
+                      boardSupport:  Math.max(0.05, Math.min(1, prev.boardSupport  + opt.board / 100)),
+                      fanSupport:    Math.max(0.05, Math.min(1, prev.fanSupport    + opt.fans  / 100)),
+                      dressingRoom:  Math.max(0.05, Math.min(1, prev.dressingRoom  + opt.squad / 100)),
+                    };
+                    saveGameLocally(next);
+                    return next;
+                  });
+                  setShowVoC(false);
+                }}
+                className="w-full rounded-xl p-3 text-left transition-all hover:opacity-90"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="font-headline font-black uppercase text-white text-[13px]">{opt.label}</div>
+                <div className="text-[9px] font-code mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>{opt.sub}</div>
+                <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                  {[['Board', opt.board], ['Fans', opt.fans], ['Squad', opt.squad]].map(([l, v]) => (
+                    <span key={l as string} className="text-[7px] font-code px-1.5 py-0.5 rounded"
+                      style={{
+                        background: (v as number) > 0 ? 'rgba(30,107,60,0.2)' : 'rgba(216,17,89,0.15)',
+                        color:      (v as number) > 0 ? '#1E6B3C' : '#D81159',
+                        border:     `1px solid ${(v as number) > 0 ? 'rgba(30,107,60,0.3)' : 'rgba(216,17,89,0.3)'}`,
+                      }}>
+                      {(v as number) > 0 ? '+' : ''}{v} {l}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Live standings ── */}
       <div className="mx-3 mb-1 rounded-lg overflow-hidden z-[90]" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex justify-between items-center px-3 py-1 border-b" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
@@ -936,6 +1082,8 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
             varCardsLeft={state.varCardsLeft ?? 0}
             momentumBuffer={state.momentumBuffer}
             onVARUse={handleVARUse}
+            kitPrimary={managerProfile?.kitPrimary}
+            kitSecondary={managerProfile?.kitSecondary}
           />
         ) : (
           <div className="w-full flex items-center justify-center relative bg-background">
@@ -960,6 +1108,18 @@ export const GameContainer = ({ initialState }: { initialState?: GameState }) =>
                 isConsequence={(state.flags ?? []).some(f => currentScenario.scenarioId.includes(f))}
               />
             ) : null}
+            {/* ── Swipe hint overlay ── */}
+            {showSwipeHint && (
+              <div className="absolute inset-0 z-[300] flex flex-col items-end justify-center pointer-events-none px-6"
+                onClick={() => setShowSwipeHint(false)}
+                style={{ pointerEvents: 'auto' }}>
+                <div className="space-y-2 text-center animate-in fade-in duration-500">
+                  <div className="text-4xl animate-bounce">👈👉</div>
+                  <div className="text-[11px] font-headline font-black uppercase tracking-[2px] text-white">Swipe to decide</div>
+                  <div className="text-[9px] font-code text-white/40">Tap to dismiss</div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
